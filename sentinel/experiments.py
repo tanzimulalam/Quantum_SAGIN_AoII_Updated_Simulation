@@ -33,9 +33,10 @@ def run_seed(task: Dict) -> List[Dict]:
     cfg_off = configure(cfg, dis__enabled=False)
     ep_off = make_episode(cfg_off, seed)
     plans = {}
-    if "sentinel" in task["policies"] or "sentinel_triggered" in task["policies"]:
+    if any(p in task["policies"] for p in ("sentinel", "sentinel_triggered", "sentinel_capped_trigger")):
         plans["sentinel"] = plan_schedule(ep_on, num_scenarios=6, solver_seed=seed)
         plans["sentinel_triggered"] = plans["sentinel"]
+        plans["sentinel_capped_trigger"] = plans["sentinel"]
     if "nominal" in task["policies"]:
         plans["nominal"] = plan_schedule(ep_on, num_scenarios=1, solver_seed=seed)
     for dis_flag, ep in (("on", ep_on), ("off", ep_off)):
@@ -45,7 +46,7 @@ def run_seed(task: Dict) -> List[Dict]:
             r = run_policy(ep, pol, plan=plans.get(pol))
             row = r.to_row()
             row.update({"sweep": task["sweep"], "x_label": task["x_label"], "x_value": task["x_value"],
-                        "disruption_mode": dis_flag, "num_scenarios": 6 if pol in ("sentinel", "sentinel_triggered") else (1 if pol == "nominal" else 0),
+                        "disruption_mode": dis_flag, "num_scenarios": 6 if pol in ("sentinel", "sentinel_triggered", "sentinel_capped_trigger") else (1 if pol == "nominal" else 0),
                         "disruption_events": ep.disruption.events})
             rows.append(row)
     for row in rows:

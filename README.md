@@ -17,7 +17,9 @@ Results and figures of the current run are summarised in `RESULTS.md`.
 | `sentinel/sources.py` | Birth-death Markov sources, stationary distribution, the renewal-interval table Psi(Y) (Eqs. aoii_slot, psi_cond, psi_def) |
 | `sentinel/scenarios.py` | Scenario set L (nominal, mild/severe shadowing, handover per SAT, joint) and the stochastic disruption process |
 | `sentinel/problem.py` | Admissible sets A_i, outage tau_imq(l), inter-delivery interval Y, cost coefficients psi_imqh^(l) (Section IV-A) |
-| `sentinel/qubo.py` | Domain QUBO: epigraph, one-hot, capacity, scenario and ADMM terms with binary slacks; penalty weights from Proposition 1; Ising map |
+| `sentinel/qubo.py` | Epigraph domain QUBO (manuscript Section V): one-hot, capacity, scenario and ADMM terms with binary slacks; penalty weights from Proposition 1; Ising map |
+| `sentinel/compact.py` | Compact slack-free formulation: scenario-weight dualization of the minimax, candidate pruning, compact domain QUBO (decision + capacity-slack qubits), one-hot-preserving annealer, warm-started ADMM |
+| `sentinel/solvers/qaoa_xy.py` | XY-mixer QAOA for the compact QUBO (W-state or greedy warm start), classical decoding; shared with the hardware runner |
 | `sentinel/solvers/qaoa.py` | Depth-p QAOA on Qiskit Aer (COBYLA on sampled energy), classical decoding |
 | `sentinel/solvers/sa.py` | Simulated annealing on the same QUBO (used when a domain exceeds the simulable qubit count) |
 | `sentinel/solvers/exact.py` | Brute-force QUBO minimizer (ground truth for small QUBOs) |
@@ -27,7 +29,10 @@ Results and figures of the current run are summarised in `RESULTS.md`.
 | `sentinel/simulator.py` | Slot-level simulation: policies, realized channel with fading and disruption, AoII tracking, metrics |
 | `sentinel/experiments.py` | Per-seed worker (common random numbers across policies) and summaries with 95% CIs |
 | `scripts/run_sweeps.py` | UE sweep (5/10/15/20 UEs) and topology sweep, N seeds in parallel |
-| `scripts/run_validation.py` | Optimality gaps vs the exact ILP (QAOA at small scale, SA at large scale, severity and L sweeps) |
+| `scripts/run_validation.py` | Optimality gaps of the epigraph encoding vs the exact ILP (QAOA at small scale, SA at large scale, severity and L sweeps) |
+| `scripts/run_validation_compact.py` | Same protocol for the compact formulation: ILP, Greedy+LS, epigraph ADMM, compact ADMM, compact QAOA-XY |
+| `scripts/hardware_run.py` | IBM Quantum runner: optimize on the simulator, sample once per domain on a device or a fake-backend noise model, decode and certify |
+| `docs/compact_formulation.md` | Mathematics of the compact formulation, XY mixers, ADMM fixes and the hardware protocol, in the manuscript's notation |
 | `scripts/make_figures.py` | All figures (`figures/`) and tables (`results/tables.md`) |
 | `tests/` | Smoke tests |
 
@@ -45,10 +50,25 @@ Python 3.12, numpy, scipy, pandas, matplotlib, qiskit 2.x and qiskit-aer are req
 ```bash
 .venv/Scripts/python.exe tests/smoke_core.py                      # end-to-end check on a small instance
 .venv/Scripts/python.exe tests/test_psi_monte_carlo.py            # Psi(Y) vs Monte Carlo
-.venv/Scripts/python.exe scripts/run_sweeps.py --seeds 30 --workers 16
+.venv/Scripts/python.exe scripts/run_sweeps.py --seeds 30 --workers 16 --formulation compact --out-prefix sweeps_compact
+.venv/Scripts/python.exe scripts/run_sweeps.py --seeds 30 --workers 16 --formulation epigraph
 .venv/Scripts/python.exe scripts/run_validation.py --exp all --seeds 10 --seeds-small 5
-.venv/Scripts/python.exe scripts/make_figures.py
+.venv/Scripts/python.exe scripts/run_validation_compact.py --exp all --seeds 10 --seeds-small 5
+.venv/Scripts/python.exe scripts/make_figures.py                                   # epigraph sweeps -> figures/
+.venv/Scripts/python.exe scripts/make_figures.py --prefix sweeps_compact --fig-prefix compact   # -> figures/compact/
+.venv/Scripts/python.exe tests/test_xy_mixer.py
 ```
+
+Hardware (IBM Quantum Open Plan). Everything is optimized on the simulator; the device only samples once per domain:
+
+```bash
+.venv/Scripts/python.exe scripts/hardware_run.py --mode estimate --fake FakeTorino --ues 6      # sizes and QPU-time estimate, nothing submitted
+.venv/Scripts/python.exe scripts/hardware_run.py --mode fake --fake FakeTorino --ues 6          # noisy local simulation with the device noise model
+.venv/Scripts/python.exe scripts/hardware_run.py --mode device --ues 6 --domains 0              # real device; needs a saved IBM Quantum account
+```
+
+The device mode never reads a token from the command line or the repository. Save your account once in your own
+Python session with `QiskitRuntimeService.save_account(channel="ibm_quantum_platform", token=..., overwrite=True)`.
 
 The 30-seed sweeps take about 25 minutes on 16 cores; the validation about 45 minutes on 8 cores (the QAOA
 instances dominate). Outputs go to `results/` (CSV) and `figures/` (PDF and PNG).
@@ -60,6 +80,13 @@ instances dominate). Outputs go to `results/` (CSV) and `figures/` (PDF and PNG)
 - `nominal`: the SENTINEL solver run on the nominal scenario only (L = 1), i.e. the non-robust counterpart. Its schedule is still certified on the full scenario set.
 - `sentinel`: robust SENTINEL (L = 6). Periodic sampling at the chosen rate, dedicated bandwidth level, chosen node, re-solved on every satellite visibility change and at least every 30 s.
 - `sentinel_triggered`: the hybrid proposed in the paper's conclusion: SENTINEL's robust association and bandwidth, with transmissions triggered by the observed mismatch.
+
+## Two formulations
+
+`solver.formulation = "compact"` (default) uses the scenario-weight dual with candidate pruning (`k_cand = 4`): the
+domain QUBO holds only decision qubits and a few capacity-slack bits, and one-hot is enforced by the XY mixer or by the
+one-hot-preserving annealer. `"epigraph"` is the manuscript's original Section V encoding with epigraph and scenario
+slack bits. Both are certified exactly by the worst case over the scenario set. See `docs/compact_formulation.md`.
 
 ## Honesty notes
 

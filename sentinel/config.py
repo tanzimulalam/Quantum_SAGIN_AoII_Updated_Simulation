@@ -101,7 +101,10 @@ class SolverConfig:
     qaoa_shots: int = 1024
     qaoa_maxiter: int = 200
     max_qaoa_qubits: int = 18
-    solver: str = "auto"                           # "auto" | "qaoa" | "sa" (penalty QUBO, transverse-mixer analogue) | "sa_xy" (one-hot-preserving) | "exact"
+    solver: str = "auto"                           # "auto" | "qaoa" | "sa" (penalty QUBO, transverse-mixer analogue) | "sa_xy" (one-hot-preserving) | "qaoa_xy" | "exact"
+    formulation: str = "compact"                   # "compact" (scenario-weight dual, slack-free) | "epigraph" (Section V encoding)
+    dual_outer_iterations: int = 6                 # exponentiated-gradient iterations on the scenario weights
+    k_cand: int = 4                                # candidate pruning: admissible combinations kept per UE (0 = all)
 
 
 @dataclass

@@ -11,11 +11,13 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 RES, FIG = ROOT / "results", ROOT / "figures"
 FIG.mkdir(exist_ok=True)
 
-POLICY_ORDER = ["random", "threshold", "nominal", "sentinel", "sentinel_triggered"]
+POLICY_ORDER = ["random", "threshold", "nominal", "sentinel", "sentinel_triggered", "sentinel_capped_trigger"]
 TOPO_ORDER = ["Ground only (2 BS)", "Satellite only (2 SAT)", "Integrated (1 BS + 1 SAT)", "Integrated (2 BS + 2 SAT)", "Integrated (3 BS + 3 SAT)"]
 POLICY_LABEL = {"random": "Random", "threshold": "AoII threshold (state-aware)", "nominal": "Nominal (non-robust) SENTINEL",
-                "sentinel": "SENTINEL (robust)", "sentinel_triggered": "SENTINEL + state-aware trigger"}
-COLORS = {"random": "#7f7f7f", "threshold": "#1f77b4", "nominal": "#ff7f0e", "sentinel": "#d62728", "sentinel_triggered": "#9467bd"}
+                "sentinel": "SENTINEL (robust)", "sentinel_triggered": "SENTINEL + state-aware trigger",
+                "sentinel_capped_trigger": "SENTINEL + rate-capped trigger"}
+COLORS = {"random": "#7f7f7f", "threshold": "#1f77b4", "nominal": "#ff7f0e", "sentinel": "#d62728", "sentinel_triggered": "#9467bd",
+          "sentinel_capped_trigger": "#17becf"}
 METRICS = [("average_aoii", "Average AoII"), ("peak_aoii", "Peak AoII"), ("delivery_ratio", "Delivery ratio"),
            ("informative_ratio", "Informative update ratio"), ("sum_rate_mbps", "Delivered goodput (Mbps)"),
            ("latency_ms", "E2E latency of delivered updates (ms)"), ("sat_delivery_share", "Satellite delivery share"),
@@ -53,9 +55,13 @@ def bar_sweep(summ, sweep, metric, ylabel, dis_mode, fname, log=False, stat="mea
     fig.savefig(FIG / f"{fname}.pdf"); fig.savefig(FIG / f"{fname}.png"); plt.close(fig)
 
 
-def main():
-    summ = pd.read_csv(RES / "sweeps_summary.csv")
-    raw = pd.read_csv(RES / "sweeps_raw.csv")
+def main(prefix="sweeps", fig_prefix=""):
+    global FIG
+    if fig_prefix:
+        FIG = ROOT / "figures" / fig_prefix
+        FIG.mkdir(parents=True, exist_ok=True)
+    summ = pd.read_csv(RES / f"{prefix}_summary.csv")
+    raw = pd.read_csv(RES / f"{prefix}_raw.csv")
     lines = ["# Regenerated results tables\n"]
     # UE sweep figures, disruption on and off
     for mode in ("on", "off"):
@@ -127,9 +133,11 @@ def main():
                 ax.plot(e, lw=0.8, label=f"{row.label}, seed {row.seed}, {row.qubits} qubits")
             ax.set_xlabel("COBYLA evaluation"); ax.set_ylabel("Sampled QAOA energy  <H_C>"); ax.legend(fontsize=6)
             fig.tight_layout(); fig.savefig(FIG / "qaoa_energy_trace.pdf"); fig.savefig(FIG / "qaoa_energy_trace.png"); plt.close(fig)
-    (RES / "tables.md").write_text("\n".join(lines), encoding="utf-8")
+    (RES / (f"tables_{prefix}.md" if prefix != "sweeps" else "tables.md")).write_text("\n".join(lines), encoding="utf-8")
     print("figures written to", FIG)
 
 
 if __name__ == "__main__":
-    main()
+    import argparse
+    ap = argparse.ArgumentParser(); ap.add_argument("--prefix", default="sweeps"); ap.add_argument("--fig-prefix", default="")
+    a = ap.parse_args(); main(a.prefix, a.fig_prefix)

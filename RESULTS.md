@@ -130,6 +130,66 @@ assignment (0 of 50 solves; 28% of UEs one-hot in the raw best sample).
 | L = 5 | 1.1 | 3.9 | 1.4 | 3.45 |
 | L = 6 | 0.0 | 1.1 | 0.0 | 4.54 |
 
+## Compact (slack-free) formulation
+
+The results above use the manuscript's epigraph QUBO (Section V). `sentinel/compact.py` replaces it with a
+scenario-weight dualization of the minimax, candidate pruning (k_cand = 4), and one-hot enforcement by XY mixers or
+one-hot-preserving moves; `docs/compact_formulation.md` gives the mathematics. Both ADMM loops were also corrected
+(warm start from an uncoupled round, rho scaled to the objective). Figures for the compact run are in
+`figures/compact/`, tables in `results/tables_sweeps_compact.md`.
+
+### Time-domain sweeps with the compact formulation (30 seeds, disruption on)
+
+Average AoII, median over seeds:
+
+| UEs | Random | AoII threshold | Nominal | Robust SENTINEL | + trigger | + rate-capped trigger |
+|---|---|---|---|---|---|---|
+| 5 | 6.93 | 0.138 | 0.279 | 0.268 | 0.149 | 0.149 |
+| 10 | 6.81 | 0.141 | 0.282 | 0.265 | 0.145 | 0.145 |
+| 15 | 6.80 | 0.145 | 0.270 | 0.261 | 0.147 | 0.147 |
+| 20 | 6.80 | 0.145 | 0.269 | 0.265 | 0.149 | 0.149 |
+
+Compared with the epigraph run, robust SENTINEL's AoII no longer grows with load (0.265 at 20 UEs versus 0.325), the
+nominal schedule improves even more (0.269 versus 0.468), and the certified worst case of the robust schedule is 4 to
+7% below the nominal one (4.27 versus 4.52 at 10 UEs) instead of 22 to 25%. Part of the earlier robust-versus-nominal
+margin was therefore an artifact of the weaker solver, which is why both runs are reported. Robust SENTINEL still has
+the lower realized AoII in 80 to 93% of seeds. Qubits per domain: 22 (5 UEs), 34 (10), 46 (15), 58 (20).
+
+The certificate held in 86% of epochs (98% with the epigraph solver). The compact solver's certificates are tighter
+(for example 3.50 versus 5.06 on the same seed with the same realized AoII), so fewer coverage-gap epochs fall under
+the bound; every violation is still a satellite pass gap longer than any scenario window.
+
+### Exact-optimum validation of the compact formulation
+
+| Setting | Qubits per domain (compact / epigraph) | Compact + one-hot annealer | Epigraph + one-hot annealer | ILP on pruned instance |
+|---|---|---|---|---|
+| 20 UEs, K = 2 | 50 to 59 / 248 to 261 | 0.0% | 1.3 to 1.6% | 0.0% |
+| 50 UEs, K = 2 | 149 to 161 / 725 to 842 | 0.0% | 12.6 to 21.5% | 0.0% |
+| 50 UEs, K = 4 | 87 to 88 / 417 to 459 | 0.0% | 7.7 to 26.3% | 0.0% |
+| 100 UEs, K = 8 | 156 to 171 / 1038 | 27 to 77% | 150% | 0.0% |
+
+At 100 UEs the gap does not close with 60 ADMM rounds or 12 outer iterations (27 to 32%); with five satellites shared
+by eight domains the coordination, not the inner solver, is the limit. Pruning to four candidates per UE never changed
+the exact optimum.
+
+XY-mixer QAOA on Aer (depth 1, 512 shots, 40 COBYLA iterations) reached the exact optimum on every 4 and 6 UE instance
+(8 to 20 qubits per domain) with 100% one-hot and capacity-feasible samples. The full validation table (ILP, Greedy+LS,
+epigraph ADMM, compact ADMM, compact QAOA at 4 to 8 UEs; size, severity and scenario-count sweeps) is in
+`results/validation_compact_summary.csv`.
+
+### Circuit sizes on a Heron processor model (FakeTorino, depth 1, optimization level 3)
+
+| Domain | Qubits | ZZ couplings | Two-qubit gates (W start) | Two-qubit gates (greedy start) |
+|---|---|---|---|---|
+| 6 UEs, domain 0 | 18 | 22 | 206 | 144 |
+| 6 UEs, domain 1 | 20 | 54 | 373 | 327 |
+| 10 UEs, domain 1 | 19 | 46 | 318 | 287 |
+| 10 UEs, domain 0 | 38 | 102 | 755 | 666 |
+| 16 UEs, domain 1 | 36 | 54 | 517 | 406 |
+
+Removing the one-hot penalty and the within-UE couplings cut the counts by 25 to 45%. Domains of about 20 qubits with
+150 to 300 two-qubit gates are the realistic target for a device run; `scripts/hardware_run.py` prepares exactly that.
+
 ## Summary of what the results support
 
 - The renewal-interval decomposition is correct (Monte Carlo agreement within 1%), and the exact ILP of P3 is solvable

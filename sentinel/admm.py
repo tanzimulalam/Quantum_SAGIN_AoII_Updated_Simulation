@@ -90,7 +90,10 @@ def sentinel_solve(inst: RobustInstance, cfg: SolverConfig, seed: int = 0, check
     Kj = {int(j): sorted(set(inst.domain_of_ue[inst.var_ue[inst.var_node == j]].tolist())) for j in shared}
     z = {int(j): {k: inst.cap_units[j] / len(Kj[int(j)]) for k in Kj[int(j)]} for j in shared}
     u = {int(j): {k: 0.0 for k in Kj[int(j)]} for j in shared}
-    rho = cfg.admm_rho
+    worst_cost = inst.cost.max(1) / inst.num_ues
+    spread = float(np.mean([worst_cost[inst.vars_of_ue(i)].max() - worst_cost[inst.vars_of_ue(i)].min()
+                            for i in range(inst.num_ues) if len(inst.vars_of_ue(i))]))
+    rho = cfg.admm_rho * max(spread, 1e-6) / max(cfg.eta_resolution, 1e-9)   # in the integer cost units of the QUBO
     best_x, best_eta, best_l = None, np.inf, -1
     primal, dual, inc = [], [], []
     solvers_used = set()
@@ -109,7 +112,7 @@ def sentinel_solve(inst: RobustInstance, cfg: SolverConfig, seed: int = 0, check
                 continue
             zk = {int(j): z[int(j)].get(k, 0.0) for j in shared}
             uk = {int(j): u[int(j)].get(k, 0.0) for j in shared}
-            dq = build_domain_qubo(inst, k, zk, uk, rho, cfg.eta_resolution, shared)
+            dq = build_domain_qubo(inst, k, zk, uk, 0.0 if r == 0 else rho, cfg.eta_resolution, shared)
             qubits.append(dq.n)
             choice, w, samples, trace, gap = _solve_local(dq, cfg, rng, seed * 1000 + r * 10 + k, check_exact,
                                                           inst=inst, zk=zk, uk=uk, rho=rho)
@@ -160,12 +163,14 @@ def sentinel_solve(inst: RobustInstance, cfg: SolverConfig, seed: int = 0, check
             if eta < best_eta - 1e-12:
                 best_x, best_eta, best_l = x.copy(), eta, l
         inc.append(best_eta)
+        if r == 0:
+            continue             # round 0 was the uncoupled warm start of the ADMM targets
         # residual balancing
         if p_res > 10 * d_res:
             rho *= 2.0
         elif d_res > 10 * p_res:
             rho /= 2.0
-        if len(shared) == 0 or (p_res <= cfg.admm_tol and d_res <= cfg.admm_tol and best_x is not None):
+        if len(shared) == 0 or (p_res <= cfg.admm_tol and best_x is not None):
             break
     repaired = False
     if best_x is None:

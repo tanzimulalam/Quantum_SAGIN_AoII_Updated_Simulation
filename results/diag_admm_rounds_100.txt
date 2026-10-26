@@ -1,0 +1,5 @@
+U=100 K=8 seed 1: ILP 0.549 | rounds<=20, outer=8, tol=0.01: eta 0.712 (+29.9%) feas=True total rounds=160 qubits=171 368s trace=[0.732, 2.111, 0.772, 0.852, 1.962, 0.762, 0.712, 0.755]
+U=100 K=8 seed 1: ILP 0.549 | rounds<=60, outer=8, tol=0.01: eta 0.726 (+32.3%) feas=True total rounds=480 qubits=171 1072s trace=[0.731, 1.941, 0.763, 0.754, 0.776, 1.048, 0.726, 1.044]
+U=100 K=8 seed 1: ILP 0.549 | rounds<=60, outer=12, tol=0.001: eta 0.698 (+27.2%) feas=True total rounds=720 qubits=171 1427s trace=[0.731, 1.941, 0.763, 0.754, 0.776, 1.048, 0.726, 1.044, 0.817, 0.698, 2.075, 0.763]
+U=100 K=8 seed 2: ILP 0.503 | rounds<=20, outer=8, tol=0.01: eta 0.887 (+76.5%) feas=True total rounds=160 qubits=156 253s trace=[1.089, 1.119, 1.276, 0.994, 1.005, 0.906, 1.083, 0.887]
+U=100 K=8 seed 2: ILP 0.503 | rounds<=60, outer=8, tol=0.01: eta 0.833 (+65.6%) feas=True total rounds=480 qubits=156 634s trace=[1.07, 1.155, 0.936, 1.083, 0.833, 0.891, 0.932, 1.004]

@@ -23,6 +23,7 @@ from .sources import SourceSet
 from .scenarios import build_scenarios, DisruptionProcess
 from .problem import build_instance, RobustInstance
 from .admm import sentinel_solve
+from .compact import compact_sentinel_solve
 
 
 @dataclass
@@ -91,7 +92,11 @@ def plan_schedule(ep: Episode, num_scenarios: int, solver_seed: int = 0, check_e
                 _visibility_signature(ep.topology, k_end) == sig:
             k_end += 1
         inst = build_instance(cfg, ep.topology, ep.sources, scen, k, horizon_intervals=k_end - k)
-        res = sentinel_solve(inst, cfg.solver, seed=solver_seed + k, check_exact=check_exact, polish=polish)
+        if cfg.solver.formulation == "compact":
+            res = compact_sentinel_solve(inst, cfg.solver, seed=solver_seed + k, outer_iterations=cfg.solver.dual_outer_iterations,
+                                         k_cand=cfg.solver.k_cand, polish=polish)
+        else:
+            res = sentinel_solve(inst, cfg.solver, seed=solver_seed + k, check_exact=check_exact, polish=polish)
         sel = inst.assignment_from_x(res.x)
         # certificate on the full scenario set (so the nominal solver's schedule is judged robustly too)
         inst_full = build_instance(cfg, ep.topology, ep.sources, full_scen, k, horizon_intervals=k_end - k, budget=np.inf)
@@ -190,7 +195,7 @@ def run_policy(ep: Episode, policy: str, plan: Optional[List[ScheduleEpoch]] = N
         vis_int[k] = vis
         best_node[k] = np.argmax(np.where(vis, full, -1.0), axis=1)
     # plan lookup
-    if policy in ("sentinel", "nominal", "sentinel_triggered"):
+    if policy in ("sentinel", "nominal", "sentinel_triggered", "sentinel_capped_trigger"):
         assert plan is not None
         epoch_of_interval = np.zeros(ep.num_intervals, dtype=int)
         for e_idx, e in enumerate(plan):
@@ -217,16 +222,19 @@ def run_policy(ep: Episode, policy: str, plan: Optional[List[ScheduleEpoch]] = N
     for t in range(1, T):
         k = t // I
         # --- decide transmitters -------------------------------------------------------------
-        if policy in ("sentinel", "nominal", "sentinel_triggered"):
+        if policy in ("sentinel", "nominal", "sentinel_triggered", "sentinel_capped_trigger"):
             e_idx = epoch_of_interval[k]
             if e_idx != cur_epoch:
                 e = plan[e_idx]
                 node, bw, period = e.node, e.bw_mhz * 1e6, e.period
                 cur_epoch = e_idx
             if policy == "sentinel_triggered":
-                # robust association + dedicated bandwidth from SENTINEL, but transmissions are triggered by the
-                # observed mismatch (as the paper's conclusion proposes), rate-capped at the shortest period
+                # robust association + dedicated bandwidth from SENTINEL, transmissions triggered by the observed
+                # mismatch, rate-capped at the shortest period
                 tx = (aoii > cfg.sim.threshold_aoii) & ((t - last_delivery) >= cfg.sim.min_update_gap_slots)
+            elif policy == "sentinel_capped_trigger":
+                # the chosen rate level is a cap: transmit on mismatch, but never more often than once per chosen period
+                tx = (aoii > cfg.sim.threshold_aoii) & ((t - last_delivery) >= period)
             else:
                 tx = (t - last_delivery) >= period
             tx_node = node

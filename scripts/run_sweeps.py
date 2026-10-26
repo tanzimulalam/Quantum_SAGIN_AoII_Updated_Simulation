@@ -10,10 +10,11 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 RES = ROOT / "results"
 
 
-def build_tasks(seeds, which):
+def build_tasks(seeds, which, formulation="compact"):
     base = FullConfig()
-    base.solver.solver = "sa_xy"           # one-hot-preserving annealer on the domain objective (domains far exceed Aer's reach)
-    policies = ["random", "threshold", "nominal", "sentinel", "sentinel_triggered"]
+    base.solver.formulation = formulation
+    base.solver.solver = "sa_xy"           # one-hot-preserving annealer; formulation set by --formulation
+    policies = ["random", "threshold", "nominal", "sentinel", "sentinel_triggered", "sentinel_capped_trigger"]
     tasks = []
     if which in ("ue", "all"):
         for U in (5, 10, 15, 20):
@@ -40,9 +41,11 @@ if __name__ == "__main__":
     ap.add_argument("--tag", default="")
     ap.add_argument("--x-filter", default=None, help="only run tasks whose x_value equals this string")
     ap.add_argument("--append", action="store_true", help="merge new rows into results/sweeps_raw.csv and re-summarize")
+    ap.add_argument("--formulation", default="compact", choices=["compact", "epigraph"])
+    ap.add_argument("--out-prefix", default="sweeps", help="prefix of the output CSV files")
     args = ap.parse_args()
     seeds = list(range(1, args.seeds + 1))
-    tasks = build_tasks(seeds, args.which)
+    tasks = build_tasks(seeds, args.which, args.formulation)
     if args.x_filter is not None:
         tasks = [t for t in tasks if str(t["x_value"]) == args.x_filter]
     print(f"{len(tasks)} tasks on {args.workers} workers", flush=True)
@@ -61,14 +64,15 @@ if __name__ == "__main__":
                 print(f"  {done}/{len(tasks)} tasks done, {time.time()-t0:.0f}s elapsed", flush=True)
     raw = pd.DataFrame(rows)
     tag = f"_{args.tag}" if args.tag else ""
-    if args.append and (RES / "sweeps_raw.csv").exists():
-        old = pd.read_csv(RES / "sweeps_raw.csv")
+    if args.append and (RES / f"{args.out_prefix}_raw.csv").exists():
+        old = pd.read_csv(RES / f"{args.out_prefix}_raw.csv")
         old = old[~((old.sweep.isin(raw.sweep.unique())) & (old.x_value.astype(str).isin(raw.x_value.astype(str).unique())))]
         raw = pd.concat([old, raw], ignore_index=True)
         rows = raw.to_dict("records")
         tag = ""
-    raw.to_csv(RES / f"sweeps_raw{tag}.csv", index=False)
-    pd.DataFrame(summarize(rows)).to_csv(RES / f"sweeps_summary{tag}.csv", index=False)
-    with open(RES / f"sweeps_config{tag}.json", "w") as fh:
-        json.dump(FullConfig().to_dict(), fh, indent=2, default=str)
+    raw.to_csv(RES / f"{args.out_prefix}_raw{tag}.csv", index=False)
+    pd.DataFrame(summarize(rows)).to_csv(RES / f"{args.out_prefix}_summary{tag}.csv", index=False)
+    cfg_dump = FullConfig(); cfg_dump.solver.formulation = args.formulation
+    with open(RES / f"{args.out_prefix}_config{tag}.json", "w") as fh:
+        json.dump(cfg_dump.to_dict(), fh, indent=2, default=str)
     print(f"done in {time.time()-t0:.0f}s; {len(raw)} rows", flush=True)
