@@ -45,13 +45,23 @@ def _prepare_w_state(qc, qubits):
         qc.cx(qubits[j], qubits[j - 1])
 
 
-def build_xy_circuit(dq, depth: int = 1, init: str = "w", warm_start_sel=None, scale: Optional[float] = None):
+def cost_scale(dq, mode: str = "max") -> float:
+    """Normalization of the cost Hamiltonian. "max": by the largest |Q| entry (penalty-dominated, cost phases tiny);
+    "cost": by the mean |linear cost coefficient| so that one cost unit gives an O(gamma) phase."""
+    if mode == "cost":
+        lin = np.abs(dq.lin[dq.lin != 0])
+        return float(lin.mean()) if len(lin) else 1.0
+    return float(np.max(np.abs(dq.Q)) + 1e-12)
+
+
+def build_xy_circuit(dq, depth: int = 1, init: str = "w", warm_start_sel=None, scale: Optional[float] = None,
+                     scale_mode: str = "max"):
     """Return (parameterized circuit with measurements, gamma parameters, beta parameters, cost scale)."""
     from qiskit import QuantumCircuit
     from qiskit.circuit import Parameter
     from qiskit.circuit.library import PauliEvolutionGate
     n = dq.n
-    scale = float(np.max(np.abs(dq.Q)) + 1e-12) if scale is None else scale
+    scale = cost_scale(dq, scale_mode) if scale is None else scale
     H_C = _build_hamiltonian(dq.Q / scale)
     slack = list(range(dq.n_x, n))
     qc = QuantumCircuit(n)
@@ -118,12 +128,12 @@ def decode_xy_counts(dq, inst, counts: dict, objective: str = "implied"):
 
 
 def qaoa_xy(dq, inst, depth: int = 1, shots: int = 512, maxiter: int = 60, seed: int = 0, init_params=None,
-            warm_start_sel=None, init: str = "w", final_shots: int = 4096, backend=None):
+            warm_start_sel=None, init: str = "w", final_shots: int = 4096, backend=None, scale_mode: str = "max"):
     """Optimize XY-QAOA parameters on a simulator and decode the best sample of a final, larger shot batch."""
     from qiskit import transpile
     from qiskit_aer import AerSimulator
     t0 = time.time()
-    qc, gammas, betas, scale = build_xy_circuit(dq, depth=depth, init=init, warm_start_sel=warm_start_sel)
+    qc, gammas, betas, scale = build_xy_circuit(dq, depth=depth, init=init, warm_start_sel=warm_start_sel, scale_mode=scale_mode)
     n = dq.n
     if backend is None:
         method = "statevector" if n <= 28 else "matrix_product_state"

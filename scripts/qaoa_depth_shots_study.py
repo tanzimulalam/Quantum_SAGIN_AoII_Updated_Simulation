@@ -42,17 +42,17 @@ def domain_qubos(seed):
 
 
 def run(task):
-    seed, k, depth, shots, init, restart = task
+    seed, k, depth, shots, init, restart, scale_mode = task
     for kk, dq, inst, best_e, best_sel in domain_qubos(seed):
         if kk != k:
             continue
         g = greedy_sel(dq, inst)
         t0 = time.time()
-        res = qaoa_xy(dq, inst, depth=depth, shots=shots, maxiter=60, seed=1000 * restart + seed, warm_start_sel=g, init=init, final_shots=4096)
+        res = qaoa_xy(dq, inst, depth=depth, shots=shots, maxiter=60, seed=1000 * restart + seed, warm_start_sel=g, init=init, final_shots=4096, scale_mode=scale_mode)
         # probability of the optimal assignment among final samples: re-decode counts is not returned, so recompute from best/mean
         from qiskit import transpile
         from qiskit_aer import AerSimulator
-        qc, _, _, _ = build_xy_circuit(dq, depth=depth, init=init, warm_start_sel=g)
+        qc, _, _, _ = build_xy_circuit(dq, depth=depth, init=init, warm_start_sel=g, scale_mode=scale_mode)
         backend = AerSimulator(seed_simulator=7)
         tqc = transpile(qc, backend, optimization_level=1)
         bound = tqc.assign_parameters(dict(zip(list(tqc.parameters), res["params"])))
@@ -63,7 +63,7 @@ def run(task):
             xk = wv[: dq.n_x]
             if dq.is_onehot(xk) and np.array_equal(dq.sel_from_x(xk), best_sel):
                 p_opt += c
-        return dict(seed=seed, domain=k, qubits=dq.n, depth=depth, shots=shots, init=init, restart=restart,
+        return dict(seed=seed, domain=k, qubits=dq.n, depth=depth, shots=shots, init=init, restart=restart, scale_mode=scale_mode,
                     p_optimal_sample=p_opt / 4096, best_energy=res["best_energy"], optimum=best_e,
                     found_optimum=abs(res["best_energy"] - best_e) < 1e-9, feasible_sample_fraction=res["feasible_sample_fraction"],
                     greedy_is_optimal=abs(dq.assignment_energy(g, inst) - best_e) < 1e-9, iterations=len(res["energies"]),
@@ -72,9 +72,10 @@ def run(task):
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(); ap.add_argument("--workers", type=int, default=4); ap.add_argument("--seeds", type=int, default=3)
+    ap.add_argument("--scale-modes", default="max,cost"); ap.add_argument("--inits", default="w,greedy"); ap.add_argument("--out", default="qaoa_depth_shots.csv")
     args = ap.parse_args()
-    tasks = [(s, k, d, sh, init, r) for s in range(1, args.seeds + 1) for k in (0, 1) for d in (1, 2) for sh in (128, 512, 2048)
-             for init in ("w", "greedy") for r in range(3)]
+    tasks = [(s, k, d, sh, init, r, sm) for s in range(1, args.seeds + 1) for k in (0, 1) for d in (1, 2) for sh in (128, 512, 2048)
+             for init in args.inits.split(",") for r in range(3) for sm in args.scale_modes.split(",")]
     print(len(tasks), "tasks", flush=True)
     rows = []; t0 = time.time()
     with ProcessPoolExecutor(max_workers=args.workers) as ex:
@@ -82,13 +83,13 @@ if __name__ == "__main__":
         for i, f in enumerate(as_completed(futs), 1):
             try:
                 rows.append(f.result())
-                pd.DataFrame(rows).to_csv(RES / "qaoa_depth_shots.csv", index=False)
+                pd.DataFrame(rows).to_csv(RES / args.out, index=False)
             except Exception as e:
                 print("FAILED", futs[f], repr(e), flush=True)
             if i % 10 == 0:
                 print(f"  {i}/{len(tasks)} {time.time()-t0:.0f}s", flush=True)
     df = pd.DataFrame(rows)
     pd.set_option("display.width", 200)
-    print(df.groupby(["depth", "shots", "init"]).agg(p_opt=("p_optimal_sample", "mean"), found=("found_optimum", "mean"),
+    print(df.groupby(["scale_mode", "init", "depth", "shots"]).agg(p_opt=("p_optimal_sample", "mean"), found=("found_optimum", "mean"),
                                                    feas=("feasible_sample_fraction", "mean"), time=("time_s", "mean")).round(3).to_string())
     print("greedy already optimal in", df.greedy_is_optimal.mean().round(3), "of domain instances")
