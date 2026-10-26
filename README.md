@@ -5,7 +5,6 @@ Satellite-Ground Integrated Edge Networks" (SENTINEL framework, VANGUARD problem
 follows the manuscript (Sections III to V), and every parameter the experiments use lives in
 `sentinel/config.py`, so the paper's parameter table can be regenerated from the code that produced the figures.
 
-Author: Tanzimul Alam Fahim (Computational Science PhD Program, Middle Tennessee State University).
 Results and figures of the current run are summarised in `RESULTS.md`.
 
 ## Layout
