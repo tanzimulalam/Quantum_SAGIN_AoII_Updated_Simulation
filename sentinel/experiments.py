@@ -47,7 +47,8 @@ def run_seed(task: Dict) -> List[Dict]:
             row = r.to_row()
             row.update({"sweep": task["sweep"], "x_label": task["x_label"], "x_value": task["x_value"],
                         "disruption_mode": dis_flag, "num_scenarios": 6 if pol in ("sentinel", "sentinel_triggered", "sentinel_capped_trigger") else (1 if pol == "nominal" else 0),
-                        "disruption_events": ep.disruption.events})
+                        "disruption_events": ep.disruption.events, "natural_handovers": ep.disruption.natural_handovers,
+                        "nlos_pass_fraction": ep.disruption.nlos_fraction, "sat_model": cfg.net.sat_model, "ntn_model": cfg.dis.ntn_model})
             rows.append(row)
     for row in rows:
         row["seed_wall_s"] = time.time() - t0

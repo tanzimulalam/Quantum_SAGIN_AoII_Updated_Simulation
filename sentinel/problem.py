@@ -88,7 +88,7 @@ class RobustInstance:
 
 def build_instance(cfg: FullConfig, topology, sources: SourceSet, scenarios: List[Scenario],
                    interval: int, horizon_intervals: int = 1, overhead_slots: int = 0,
-                   budget: Optional[float] = None) -> RobustInstance:
+                   budget: Optional[float] = None, exclude_mask: Optional[np.ndarray] = None) -> RobustInstance:
     rc, sc, so = cfg.radio, cfg.src, cfg.solver
     U, B, S = topology.num_ues, topology.num_bs, topology.num_sat
     M = B + S
@@ -104,6 +104,8 @@ def build_instance(cfg: FullConfig, topology, sources: SourceSet, scenarios: Lis
         r2, v2 = nominal_rate_table(topology, t, rc)
         visible &= v2
         rates = np.minimum(rates, r2)
+    if exclude_mask is not None:
+        visible = visible & ~exclude_mask.astype(bool)          # links reported down by ACK feedback
     # scenario rates (only satellites are affected)
     L = len(scenarios)
     scen_rates = np.empty((L, U, M, Q))

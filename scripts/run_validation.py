@@ -145,6 +145,7 @@ if __name__ == "__main__":
             done += 1
             try:
                 rows.extend(f.result())
+                pd.DataFrame(rows).to_csv(RES / "validation_raw_partial.csv", index=False)   # incremental save
             except Exception as e:
                 print("FAILED", futs[f], repr(e), flush=True)
             print(f"  {done}/{len(tasks)} {futs[f]} {time.time()-t0:.0f}s", flush=True)

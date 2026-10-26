@@ -21,9 +21,13 @@ class NetworkConfig:
     sat_altitude_km: float = 550.0
     min_elevation_deg: float = 10.0  # minimum usable elevation Theta
     num_domains: int = 2             # one BS per domain; all SATs are shared across domains
-    # satellite pass model
+    # satellite pass model: "synthetic" (random passes) or "tle" (real constellation snapshot via SGP4)
+    sat_model: str = "synthetic"
     sat_max_elevation_range_deg: Tuple[float, float] = (30.0, 90.0)
-    sat_handover_gap_s: Tuple[float, float] = (5.0, 40.0)   # gap between consecutive passes in the same slot
+    sat_handover_gap_s: Tuple[float, float] = (5.0, 40.0)   # gap between consecutive passes in the same slot (synthetic)
+    tle_file: str = "data/starlink_tle_snapshot.txt"
+    site_lat_deg: float = 35.8456                           # Murfreesboro, TN (MTSU)
+    site_lon_deg: float = -86.3903
 
 
 @dataclass
@@ -80,6 +84,11 @@ class DisruptionConfig:
     p_shadowing_event_per_link: float = 0.07       # per UE-SAT link per interval; mild/severe equiprobable
     p_handover_failure_per_sat: float = 0.03       # per SAT per interval (random blockage, affects all its UEs)
     enabled: bool = True                           # False -> nominal channel (no stochastic disruption)
+    # 3GPP TR 38.811 style NTN large-scale channel: elevation-dependent LOS probability, clutter loss in NLOS,
+    # slow shadow fading per pass, atmospheric absorption. Applied to every UE-satellite link in the time domain.
+    ntn_model: bool = False
+    ntn_environment: str = "suburban"
+    ntn_zenith_atmospheric_db: float = 0.5
 
 
 @dataclass
@@ -115,6 +124,11 @@ class SimConfig:
     random_activation_prob: float = 0.10           # Random baseline: P(transmit) per slot
     threshold_aoii: float = 0.0                    # AoII-threshold baseline: transmit when AoII > threshold (0 = on any mismatch)
     min_update_gap_slots: int = 5                  # rate cap rho^max for baselines (same as shortest SENTINEL period)
+    # ACK-based link-failure handling (all policies): after failure_threshold consecutive failed attempts on a node the
+    # UE blocks that node for failure_block_slots; SENTINEL variants additionally re-solve with the link excluded
+    failure_window_slots: int = 60                 # a link is declared down after 60 slots (0.6 s) of failures with no success
+    failure_block_slots: int = 600
+    reactive_resolve: bool = True
     bs_compute_gcycles_s: float = 120.0
     sat_compute_gcycles_s: float = 60.0
     cycles_per_bit: float = 500.0

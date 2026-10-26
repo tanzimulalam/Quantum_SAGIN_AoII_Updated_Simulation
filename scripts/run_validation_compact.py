@@ -57,10 +57,10 @@ def evaluate(task):
                      qubits=max(c.qubits_per_domain) if c.qubits_per_domain else 0, rounds=c.admm_rounds_total,
                      eta_trace=json.dumps([round(v, 4) for v in c.eta_trace])))
     if task.get("qaoa", False):
-        sc = copy.deepcopy(cfg.solver); sc.solver = "qaoa_xy"
+        sc = copy.deepcopy(cfg.solver); sc.solver = "auto"      # qaoa_xy up to max_qaoa_qubits, else sa_xy
         q = compact_sentinel_solve(inst, sc, seed=seed, outer_iterations=task.get("qaoa_outer", 4), k_cand=K_CAND)
         qi = [i for i in q.qaoa_info]
-        rows.append(dict(base, solver="Compact dual + QAOA-XY (Aer)", eta=q.eta, feasible=q.feasible, time_s=q.time_s, gap_pct=100 * (q.eta / ref - 1),
+        rows.append(dict(base, solver=("Compact dual + QAOA-XY (Aer)" if q.solver_used == "qaoa_xy" else f"Compact dual + QAOA-XY/{q.solver_used}"), eta=q.eta, feasible=q.feasible, time_s=q.time_s, gap_pct=100 * (q.eta / ref - 1),
                          qubits=max(q.qubits_per_domain) if q.qubits_per_domain else 0, rounds=q.admm_rounds_total,
                          qaoa_solves=len(qi), feasible_sample_fraction=float(np.mean([i["feasible_sample_fraction"] for i in qi])) if qi else np.nan,
                          two_qubit_gates=int(np.max([i["two_qubit_gates"] for i in qi])) if qi else 0,
@@ -77,8 +77,9 @@ def build_tasks(args):
     tasks = []
     if args.exp in ("A", "all"):
         for U in (4, 6, 8):
+            # domains above max_qaoa_qubits fall back to the one-hot annealer (statevector QAOA beyond ~26 qubits takes hours)
             cfg = configure(base, net__num_ues=U, net__num_bs=2, net__num_sat=2, net__num_domains=2, solver__qaoa_depth=1,
-                            solver__qaoa_shots=512, solver__qaoa_maxiter=args.qaoa_iters, solver__max_qaoa_qubits=40, solver__admm_max_rounds=6)
+                            solver__qaoa_shots=512, solver__qaoa_maxiter=args.qaoa_iters, solver__max_qaoa_qubits=26, solver__admm_max_rounds=6)
             for s in range(1, args.seeds_small + 1):
                 tasks.append(dict(exp="A", cfg=cfg, seed=s, L=6, label=f"U={U}", qaoa=True, epigraph=True))
     if args.exp in ("B", "all"):
@@ -119,6 +120,7 @@ if __name__ == "__main__":
             done += 1
             try:
                 rows.extend(f.result())
+                pd.DataFrame(rows).to_csv(RES / "validation_compact_raw_partial.csv", index=False)   # incremental save
             except Exception as e:
                 print("FAILED", futs[f], repr(e), flush=True)
             print(f"  {done}/{len(tasks)} {futs[f]} {time.time()-t0:.0f}s", flush=True)

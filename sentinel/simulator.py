@@ -48,7 +48,8 @@ def make_episode(cfg: FullConfig, seed: int) -> Episode:
     sources = SourceSet(cfg.net.num_ues, cfg.src, seed)
     rng = np.random.default_rng(seed + 777)
     X = sources.simulate(T, rng)
-    dis = DisruptionProcess(cfg.dis, cfg.net.num_ues, cfg.net.num_sat, T, I, np.random.default_rng(seed + 999))
+    dis = DisruptionProcess(cfg.dis, cfg.net.num_ues, cfg.net.num_sat, T, I, np.random.default_rng(seed + 999),
+                            switches=getattr(topo, "sat_switches", None), topology=topo)
     fading = np.random.default_rng(seed + 4242).normal(0.0, cfg.radio.fading_std_db, size=(T, cfg.net.num_ues)).astype(np.float32)
     return Episode(cfg=cfg, seed=seed, topology=topo, sources=sources, X=X, disruption=dis, fading_db=fading,
                    num_slots=T, num_intervals=n_int)
@@ -168,6 +169,7 @@ class RunResult:
     solve_time_s: float = 0.0
     epochs: int = 0
     forced_fallback_ues: int = 0
+    reactive_resolves: int = 0
     wall_time_s: float = 0.0
 
     def to_row(self) -> Dict:
@@ -188,12 +190,14 @@ def run_policy(ep: Episode, policy: str, plan: Optional[List[ScheduleEpoch]] = N
     d_bs = ep.topology.ue_bs_distance_m() if B else np.zeros((U, 0))
     # per-interval best nominal node for the threshold policy and visible-node lists for random
     best_node = np.zeros((ep.num_intervals, U), dtype=int)
+    best_rate_int = np.zeros((ep.num_intervals, U, M))
     vis_int = np.zeros((ep.num_intervals, U, M), dtype=bool)
     for k in range(ep.num_intervals):
         rates, vis = nominal_rate_table(ep.topology, k, rc)
         full = rates[:, :, -1] * vis               # rate at the largest level
         vis_int[k] = vis
         best_node[k] = np.argmax(np.where(vis, full, -1.0), axis=1)
+        best_rate_int[k] = full
     # plan lookup
     if policy in ("sentinel", "nominal", "sentinel_triggered", "sentinel_capped_trigger"):
         assert plan is not None
@@ -219,6 +223,11 @@ def run_policy(ep: Episode, policy: str, plan: Optional[List[ScheduleEpoch]] = N
     cap_sat = cfg.sim.sat_compute_gcycles_s * 1e9
     node = np.zeros(U, dtype=int); bw = np.zeros(U); period = np.zeros(U, dtype=int)
     cur_epoch = -1
+    fail_since = np.full(U, -1, dtype=int)                 # slot of the first failure of the current streak (-1: none)
+    blocked_until = np.zeros((U, M), dtype=int)            # slot until which UE i avoids node m
+    reactive_resolves = 0
+    scen_full = build_scenarios(cfg.dis, cfg.net.num_sat, 6)
+    scen_plan = build_scenarios(cfg.dis, cfg.net.num_sat, 1 if policy == "nominal" else 6)
     for t in range(1, T):
         k = t // I
         # --- decide transmitters -------------------------------------------------------------
@@ -226,7 +235,7 @@ def run_policy(ep: Episode, policy: str, plan: Optional[List[ScheduleEpoch]] = N
             e_idx = epoch_of_interval[k]
             if e_idx != cur_epoch:
                 e = plan[e_idx]
-                node, bw, period = e.node, e.bw_mhz * 1e6, e.period
+                node, bw, period = e.node.copy(), e.bw_mhz * 1e6, e.period.copy()
                 cur_epoch = e_idx
             if policy == "sentinel_triggered":
                 # robust association + dedicated bandwidth from SENTINEL, transmissions triggered by the observed
@@ -244,12 +253,19 @@ def run_policy(ep: Episode, policy: str, plan: Optional[List[ScheduleEpoch]] = N
             tx &= (t - last_delivery) >= 1
             tx_node = np.zeros(U, dtype=int)
             for i in np.flatnonzero(tx):
-                cands = np.flatnonzero(vis_int[k, i])
+                cands = np.flatnonzero(vis_int[k, i] & ~(blocked_until[i] > t))
+                if len(cands) == 0:
+                    cands = np.flatnonzero(vis_int[k, i])
                 tx_node[i] = rng.choice(cands) if len(cands) else 0
             tx_bw = None
         elif policy == "threshold":
             tx = (aoii > cfg.sim.threshold_aoii) & ((t - last_delivery) >= cfg.sim.min_update_gap_slots)
-            tx_node = best_node[k]
+            if (blocked_until > t).any():
+                allowed = vis_int[k] & ~(blocked_until > t)
+                score = np.where(allowed, best_rate_int[k], -1.0)
+                tx_node = np.where(allowed.any(axis=1), np.argmax(score, axis=1), best_node[k])
+            else:
+                tx_node = best_node[k]
             tx_bw = None
         else:
             raise ValueError(policy)
@@ -283,6 +299,28 @@ def run_policy(ep: Episode, policy: str, plan: Optional[List[ScheduleEpoch]] = N
                 sat_sched += int((~is_bs).sum())
             ok = rate * T_s >= D
             attempts += len(idx)
+            # ACK feedback: consecutive failures block the node; SENTINEL variants re-solve without the dead link
+            fail_since[idx[ok]] = -1
+            failed = idx[~ok]
+            if len(failed):
+                fresh = fail_since[failed] < 0
+                fail_since[failed[fresh]] = t
+                persistent = (t - fail_since[failed]) >= cfg.sim.failure_window_slots
+                newly = failed[persistent]
+                if len(newly):
+                    blocked_until[newly, n_i[~ok][persistent]] = t + cfg.sim.failure_block_slots
+                    fail_since[newly] = -1
+                    if plan is not None and cfg.sim.reactive_resolve:
+                        excl = blocked_until > t
+                        inst_r = build_instance(cfg, ep.topology, ep.sources, scen_plan, k, horizon_intervals=1, exclude_mask=excl)
+                        if cfg.solver.formulation == "compact":
+                            res_r = compact_sentinel_solve(inst_r, cfg.solver, seed=ep.seed + t, outer_iterations=cfg.solver.dual_outer_iterations,
+                                                           k_cand=cfg.solver.k_cand)
+                        else:
+                            res_r = sentinel_solve(inst_r, cfg.solver, seed=ep.seed + t)
+                        sel_r = inst_r.assignment_from_x(res_r.x)
+                        node = inst_r.var_node[sel_r].copy(); bw = inst_r.var_bw_mhz[sel_r] * 1e6; period = inst_r.var_period[sel_r].copy()
+                        reactive_resolves += 1
             if ok.any():
                 good = idx[ok]
                 deliveries += len(good)
@@ -337,4 +375,5 @@ def run_policy(ep: Episode, policy: str, plan: Optional[List[ScheduleEpoch]] = N
         res.solve_time_s = float(sum(e.time_s for e in plan))
         res.epochs = len(plan)
         res.forced_fallback_ues = int(max(e.forced for e in plan))
+        res.reactive_resolves = reactive_resolves
     return res

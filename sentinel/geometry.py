@@ -8,6 +8,7 @@ elevation constraint C5 really binds and handovers really happen.
 """
 from __future__ import annotations
 
+import pathlib
 from dataclasses import dataclass
 from typing import List
 
@@ -29,6 +30,7 @@ class Topology:
     domain_of_ue: np.ndarray     # (U,) domain index (nearest BS)
     domain_of_bs: np.ndarray     # (B,)
     num_intervals: int
+    sat_switches: list = None    # TLE mode: (slot, interval, satellite) natural handovers
 
     @property
     def num_ues(self) -> int:
@@ -110,7 +112,16 @@ def build_topology(cfg: NetworkConfig, seed: int, num_intervals: int, interval_s
         # no BS: split UEs geographically into K domains by x coordinate
         domain_of_ue = (ue_xy[:, 0] * K / A).astype(int).clip(0, K - 1)
 
-    # satellite passes
+    if cfg.sat_model == "tle" and cfg.num_sat > 0:
+        from .tle_geometry import tle_passes, default_start_utc, DATA_DIR
+        tle_path = cfg.tle_file if pathlib.Path(cfg.tle_file).is_absolute() else str(DATA_DIR.parent / cfg.tle_file)
+        start = default_start_utc(tle_path, seed)
+        el, rg, visible, switches, _ = tle_passes(tle_path, cfg.site_lat_deg, cfg.site_lon_deg, ue_xy, A, start, num_intervals,
+                                                  interval_s, cfg.num_sat, cfg.min_elevation_deg)
+        return Topology(ue_xy_m=ue_xy, bs_xy_m=bs_xy, bs_height_m=cfg.bs_height_m, ue_height_m=cfg.ue_height_m,
+                        sat_elev_deg=el, sat_range_m=rg, sat_visible=visible, domain_of_ue=domain_of_ue,
+                        domain_of_bs=domain_of_bs, num_intervals=num_intervals, sat_switches=switches)
+    # synthetic satellite passes
     h = cfg.sat_altitude_km * 1e3
     v_g = _ground_speed_m_s(h)
     t_int = (np.arange(num_intervals) + 0.5) * interval_s

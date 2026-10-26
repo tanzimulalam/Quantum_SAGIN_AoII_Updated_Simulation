@@ -81,6 +81,25 @@ instances dominate). Outputs go to `results/` (CSV) and `figures/` (PDF and PNG)
 - `sentinel`: robust SENTINEL (L = 6). Periodic sampling at the chosen rate, dedicated bandwidth level, chosen node, re-solved on every satellite visibility change and at least every 30 s.
 - `sentinel_triggered`: the hybrid proposed in the paper's conclusion: SENTINEL's robust association and bandwidth, with transmissions triggered by the observed mismatch.
 
+## Physical-layer options
+
+- `net.sat_model = "synthetic"` (random passes with configurable maximum elevation and handover gaps) or `"tle"`:
+  passes propagated with SGP4 from the Starlink snapshot in `data/starlink_tle_snapshot.txt` (10,636 satellites,
+  fetched at the time recorded in `data/starlink_tle_snapshot.fetched_utc.txt`) over the MTSU site; each serving slot
+  keeps its satellite until it sets and then hands over to the best visible one (6 to 12 natural handovers per 10 min
+  at a 25 degree mask). Natural handovers interrupt the slot for `handover_window_slots`.
+- `dis.ntn_model = True` adds the 3GPP TR 38.811 large-scale NTN channel: elevation-dependent LOS probability per
+  pass, clutter loss in NLOS, slow shadow fading per pass, and atmospheric absorption (suburban or urban tables; Ku
+  values interpolated between the S- and Ka-band entries).
+- All policies use ACK feedback: a link with `failure_window_slots` (60) consecutive failed slots is blocked for
+  `failure_block_slots` (600) and, for the SENTINEL variants, the schedule is re-solved with that link excluded
+  (`sim.reactive_resolve`). Transient outages inside the scenario windows never trigger it.
+
+```bash
+.venv/Scripts/python.exe scripts/run_sweeps.py --seeds 30 --workers 16 --sat-model tle --ntn --out-prefix sweeps_tle_ntn
+.venv/Scripts/python.exe scripts/make_figures.py --prefix sweeps_tle_ntn --fig-prefix tle_ntn
+```
+
 ## Two formulations
 
 `solver.formulation = "compact"` (default) uses the scenario-weight dual with candidate pruning (`k_cand = 4`): the

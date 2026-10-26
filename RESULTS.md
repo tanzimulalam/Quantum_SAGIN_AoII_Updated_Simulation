@@ -190,6 +190,18 @@ epigraph ADMM, compact ADMM, compact QAOA at 4 to 8 UEs; size, severity and scen
 Removing the one-hot penalty and the within-UE couplings cut the counts by 25 to 45%. Domains of about 20 qubits with
 150 to 300 two-qubit gates are the realistic target for a device run; `scripts/hardware_run.py` prepares exactly that.
 
+### Noisy simulation with the Heron device model (FakeTorino, 6 UEs, k_cand 4, depth 1, greedy start, 2048 shots)
+
+| Domain | Qubits | Two-qubit gates | Depth | Noiseless feasible samples | Noisy one-hot samples | Noisy feasible samples | Best decoded energy (noisy = noiseless) |
+|---|---|---|---|---|---|---|---|
+| 0 | 18 | 137 | 169 | 100% | 54.4% | 54.4% | yes |
+| 1 | 20 | 279 | 355 | 100% | 35.5% | 35.5% | yes |
+
+Device noise breaks the one-hot structure in 46 to 65% of the shots, but the classical decoder discards those, and the
+best surviving sample equals the noiseless optimum in both domains. The schedule decoded from the noisy samples has
+eta = 2.5062, identical to the exact ILP optimum (`results/hardware/fake_U6_k4_p1_s1_greedy/`). The same script submits
+these two circuits to a real device with `--mode device`, using one sampling job per domain (a few seconds of QPU time).
+
 ## Summary of what the results support
 
 - The renewal-interval decomposition is correct (Monte Carlo agreement within 1%), and the exact ILP of P3 is solvable
