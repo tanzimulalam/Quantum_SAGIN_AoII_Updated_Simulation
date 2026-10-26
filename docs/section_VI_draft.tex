@@ -85,8 +85,30 @@ The realized average AoII stayed at or below the certified worst case in 86\% of
 (Fig.~\ref{fig:certificate}); every violation coincides with a satellite pass gap longer than any window in
 $\mathscr{L}$, which the synthetic pass model produces in two of thirty seeds. With passes propagated from the Starlink
 snapshot such gaps do not occur, and the dominant satellite disruptions become natural handovers and NLOS passes.
-% TODO-TLE: median AoII table from results/sweeps_tle_ntn_summary.csv; certificate validity; NLOS pass fraction (about 10%).
-% Single-seed preview: threshold 0.72 (needs 0.6 s to detect each dead pass), robust SENTINEL 0.21, +trigger 0.12.
+With real passes (Table~\ref{tab:tle}) the certificate holds in 98.7\% of epochs; the remaining violations are
+NLOS passes whose clutter loss exceeds the 12~dB severe-shadowing scenario. Robust and nominal schedules are
+indistinguishable in realized median AoII, while the robust certificate is 4 to 8\% lower and its mean AoII at 20 UEs
+is 16\% lower ($0.39$ versus $0.46$): robustness buys a guaranteed worst case at essentially no average cost. The
+state-aware threshold policy, given the same ACK feedback as SENTINEL, is the strongest on average AoII ($0.13$ to
+$0.15$); SENTINEL with state-aware triggering is within 10 to 20\% of it while retaining the certificate and routing
+21 to 27\% of deliveries to BSs. Peak AoII is 100 to 250 for every policy, set by the 20-slot handover interruptions
+and the NLOS passes rather than by scheduling.
+\begin{table}[!t]
+\centering
+\caption{Median Average AoII with Starlink Passes and the TR~38.811 Channel (30 seeds, disruption on)}
+\label{tab:tle}
+\footnotesize
+\begin{tabular}{|c|c|c|c|c|c|}
+\hline
+\textbf{UEs} & \textbf{Random} & \textbf{AoII thr.} & \textbf{Nominal} & \textbf{SENTINEL} & \textbf{+ trigger} \\
+\hline
+5 & 5.94 & 0.134 & 0.253 & 0.265 & 0.155 \\
+10 & 6.06 & 0.142 & 0.270 & 0.269 & 0.168 \\
+15 & 5.87 & 0.142 & 0.269 & 0.264 & 0.155 \\
+20 & 6.05 & 0.149 & 0.276 & 0.278 & 0.175 \\
+\hline
+\end{tabular}
+\end{table}
 Fig.~\ref{fig:topology} compares ground-only, satellite-only, and integrated deployments at 10 UEs: two BSs cover
 only the UEs within 5 to 7~km of a $20\times20$~km$^2$ area, so ground-only monitoring fails (median AoII 60 to 78),
 two satellite planes alone bring every policy below $0.4$, and the integrated $2+2$ and $3+3$ topologies are best,

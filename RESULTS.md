@@ -242,6 +242,36 @@ and therefore reported P(opt) about 0.02; those files are kept as `results/qaoa_
 `results/qaoa_depth_shots_qubo_objective*.csv` (the latter also used the raw QUBO energy, dominated by slack bits, as
 the optimizer objective).
 
+## Real passes and the NTN channel (TLE + TR 38.811, 30 seeds, compact formulation)
+
+`results/sweeps_tle_ntn_*`, `figures/tle_ntn/`, `results/tables_sweeps_tle_ntn.md`. Starlink snapshot passes at a
+25 degree mask (9 natural handovers per 10 min), suburban NTN channel (4.9% of pass segments NLOS), stochastic
+shadowing and handover-failure events as before, ACK-based link-failure handling for every policy.
+
+Median average AoII, disruption on:
+
+| UEs | Random | AoII threshold | Nominal | Robust SENTINEL | SENTINEL + trigger |
+|---|---|---|---|---|---|
+| 5 | 5.94 | 0.134 | 0.253 | 0.265 | 0.155 |
+| 10 | 6.06 | 0.142 | 0.270 | 0.269 | 0.168 |
+| 15 | 5.87 | 0.142 | 0.269 | 0.264 | 0.155 |
+| 20 | 6.05 | 0.149 | 0.276 | 0.278 | 0.175 |
+
+Topology at 10 UEs (median): ground-only 63 to 73 for every policy; satellite-only 0.14 (threshold) / 0.28 (robust) /
+0.18 (trigger); integrated 2+2 and 3+3 as in the table; integrated 1+1 0.90 / 1.56 / 5.4.
+
+- The certificate held in 98.7% of epochs (98.5% nominal): the dense constellation has no coverage gaps, and the
+  remaining violations are NLOS passes whose clutter loss exceeds the 12 dB severe-shadowing scenario.
+- Robust and nominal schedules are indistinguishable in realized median AoII (robust lower in 43 to 67% of seeds);
+  the robust schedule's certificate is 4 to 8% lower (4.26 to 4.47 vs 4.40 to 4.84) and its mean at 20 UEs is lower
+  (0.39 vs 0.46). SENTINEL routes 21 to 27% of deliveries to BSs, the threshold policy 2 to 3%.
+- With ACK feedback the state-aware threshold policy is the strongest on average AoII; SENTINEL + trigger is within
+  10 to 20% of it while keeping the certificate. Without feedback the threshold policy collapsed (AoII 32 on a test
+  seed), so any state-aware baseline must be given the same feedback.
+- Peak AoII is 100 to 250 for every policy, set by 20-slot handover interruptions and NLOS passes.
+- Cost: 20 to 58 qubits per domain, 34 re-solve epochs plus 8 to 28 reactive re-solves per run, 34 to 223 s of
+  solver time per 10-minute run.
+
 ## Summary of what the results support
 
 - The renewal-interval decomposition is correct (Monte Carlo agreement within 1%), and the exact ILP of P3 is solvable
