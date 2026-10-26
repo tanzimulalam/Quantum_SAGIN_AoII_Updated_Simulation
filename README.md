@@ -101,6 +101,7 @@ instances dominate). Outputs go to `results/` (CSV) and `figures/` (PDF and PNG)
 ```bash
 .venv/Scripts/python.exe scripts/run_sweeps.py --seeds 30 --workers 16 --sat-model tle --ntn --out-prefix sweeps_tle_ntn
 .venv/Scripts/python.exe scripts/make_figures.py --prefix sweeps_tle_ntn --fig-prefix tle_ntn
+.venv/Scripts/python.exe scripts/run_sweeps.py --seeds 30 --workers 16 --which ue --sat-model tle --ntn --no-ack --out-prefix sweeps_tle_ntn_noack   # ablation
 ```
 
 ## Two formulations

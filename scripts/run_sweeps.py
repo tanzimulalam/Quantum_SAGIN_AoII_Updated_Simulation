@@ -10,11 +10,15 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 RES = ROOT / "results"
 
 
-def build_tasks(seeds, which, formulation="compact", sat_model="synthetic", ntn=False):
+def build_tasks(seeds, which, formulation="compact", sat_model="synthetic", ntn=False, no_ack=False):
     base = FullConfig()
     base.solver.formulation = formulation
     base.net.sat_model = sat_model
     base.dis.ntn_model = ntn
+    if no_ack:
+        # ablation: no ACK-based link-failure handling for any policy (no blocking, no reactive re-solve)
+        base.sim.failure_window_slots = 10**9
+        base.sim.reactive_resolve = False
     if sat_model == "tle":
         base.net.min_elevation_deg = 25.0        # typical NTN user-terminal mask for a dense LEO constellation
     base.solver.solver = "sa_xy"           # one-hot-preserving annealer; formulation set by --formulation
@@ -48,10 +52,11 @@ if __name__ == "__main__":
     ap.add_argument("--formulation", default="compact", choices=["compact", "epigraph"])
     ap.add_argument("--sat-model", default="synthetic", choices=["synthetic", "tle"])
     ap.add_argument("--ntn", action="store_true", help="enable the TR 38.811 large-scale NTN channel model")
+    ap.add_argument("--no-ack", action="store_true", help="ablation: disable ACK-based link-failure handling for all policies")
     ap.add_argument("--out-prefix", default="sweeps", help="prefix of the output CSV files")
     args = ap.parse_args()
     seeds = list(range(1, args.seeds + 1))
-    tasks = build_tasks(seeds, args.which, args.formulation, args.sat_model, args.ntn)
+    tasks = build_tasks(seeds, args.which, args.formulation, args.sat_model, args.ntn, args.no_ack)
     if args.x_filter is not None:
         tasks = [t for t in tasks if str(t["x_value"]) == args.x_filter]
     print(f"{len(tasks)} tasks on {args.workers} workers", flush=True)

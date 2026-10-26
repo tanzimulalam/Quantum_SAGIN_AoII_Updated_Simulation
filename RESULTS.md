@@ -276,12 +276,17 @@ Topology at 10 UEs (median): ground-only 63 to 73 for every policy; satellite-on
 
 - The renewal-interval decomposition is correct (Monte Carlo agreement within 1%), and the exact ILP of P3 is solvable
   in well under a second at every size considered.
-- The certified worst-case AoII is valid against the modelled scenario set, and the robust schedule lowers both the
-  certificate and the realized AoII relative to the nominal schedule.
-- The satellite tier is essential in a 20 km area, and the robust schedule uses the BS tier as a hedge.
-- Robust association combined with state-aware triggering matches the best state-aware baseline while keeping the
-  certificate.
-- Depth-2 QAOA reaches the optimum only on domains of at most 26 qubits, and only at a cost resolution too coarse to be
-  useful beyond 3 UEs; the penalty-slack QUBO is not practically solvable by single-flip search at 200+ qubits;
-  constraint-preserving moves are required. Greedy plus local search matches or beats the distributed loop at every
-  size.
+- The certified worst-case AoII is valid against the modelled scenario set: 98.7% of epochs with real passes, 86 to
+  98% with the synthetic pass model whose coverage gaps exceed every scenario window.
+- The robust schedule's certificate is 4 to 8% below the nominal one at essentially no cost in median realized AoII,
+  with a lower mean at high load; the robust schedule hedges by routing a quarter of deliveries to BSs.
+- The satellite tier is essential in a 20 km area; ground-only monitoring fails, integrated 2+2 or 3+3 is best.
+- A state-aware threshold policy with ACK feedback has the lowest average AoII in every setting; SENTINEL with
+  state-aware triggering is within 10 to 20% of it while keeping the certificate.
+- The compact (dualized, slack-free) formulation is exact through 25 UEs with 4 to 5 times fewer qubits than the
+  epigraph encoding, within 12% at 50 UEs, and limited by shared-satellite coordination at 75 to 100 UEs; the epigraph
+  encoding is unusable beyond a few UEs.
+- XY-mixer QAOA solves hardware-sized domains (12 to 24 qubits) to optimality in simulation and recovers the optimum
+  from 36 to 70% surviving shots on Heron noise models; it is a correct constrained sampler (1.5 to 2.2 times the
+  uniform concentration on the optimal set at depth 1 to 2), not a better optimizer than greedy, which is already
+  optimal on these domains.
