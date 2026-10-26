@@ -133,6 +133,35 @@ def main(prefix="sweeps", fig_prefix=""):
                 ax.plot(e, lw=0.8, label=f"{row.label}, seed {row.seed}, {row.qubits} qubits")
             ax.set_xlabel("COBYLA evaluation"); ax.set_ylabel("Sampled QAOA energy  <H_C>"); ax.legend(fontsize=6)
             fig.tight_layout(); fig.savefig(FIG / "qaoa_energy_trace.pdf"); fig.savefig(FIG / "qaoa_energy_trace.png"); plt.close(fig)
+    # compact-formulation validation (separate CSV)
+    vc = RES / "validation_compact_summary.csv"
+    if vc.exists() and prefix == "sweeps":
+        v = pd.read_csv(vc)
+        lines.append("## Compact formulation: optimality gap vs the exact ILP of P3 (mean %, feasible solutions)\n")
+        for exp in sorted(v.exp.unique()):
+            d = v[v.exp == exp]
+            lines.append(f"### Experiment {exp}\n")
+            lines.append(d.pivot_table(index="label", columns="solver", values="gap_mean").round(2).to_markdown() + "\n")
+            lines.append("Qubits per domain (max):\n\n" + d.pivot_table(index="label", columns="solver", values="qubits_max").round(0).to_markdown() + "\n")
+            fig, ax = plt.subplots(figsize=(5.6, 3.6))
+            labels = list(dict.fromkeys(d.label))
+            for solver in [s_ for s_ in d.solver.unique() if "ILP on pruned" not in s_ and s_ != "ILP exact"]:
+                sub = d[d.solver == solver].set_index("label").reindex(labels)
+                ax.plot(range(len(labels)), sub.gap_mean, marker="o", label=solver)
+            ax.set_xticks(range(len(labels))); ax.set_xticklabels(labels)
+            ax.set_ylabel("Mean gap vs exact ILP (%)")
+            ax.legend(fontsize=6, loc="upper center", bbox_to_anchor=(0.5, -0.18), ncol=2, frameon=False)
+            fig.tight_layout(); fig.savefig(ROOT / "figures" / f"validation_compact_{exp}_gap.pdf"); fig.savefig(ROOT / "figures" / f"validation_compact_{exp}_gap.png"); plt.close(fig)
+        d = v[(v.exp == "B") & v.solver.isin(["Compact dual + SA-XY ADMM", "Epigraph QUBO + SA-XY ADMM"])]
+        if len(d):
+            fig, ax = plt.subplots(figsize=(4.6, 3.2))
+            labels = list(dict.fromkeys(d.label))
+            for solver, lab in (("Epigraph QUBO + SA-XY ADMM", "Epigraph encoding (Section V)"), ("Compact dual + SA-XY ADMM", "Compact dual encoding")):
+                sub = d[d.solver == solver].set_index("label").reindex(labels)
+                ax.plot(range(len(labels)), sub.qubits_max, marker="o", label=lab)
+            ax.set_xticks(range(len(labels))); ax.set_xticklabels(labels); ax.set_yscale("log")
+            ax.set_ylabel("Qubits per domain (max)"); ax.legend(fontsize=7)
+            fig.tight_layout(); fig.savefig(ROOT / "figures" / "qubits_compact_vs_epigraph.pdf"); fig.savefig(ROOT / "figures" / "qubits_compact_vs_epigraph.png"); plt.close(fig)
     (RES / (f"tables_{prefix}.md" if prefix != "sweeps" else "tables.md")).write_text("\n".join(lines), encoding="utf-8")
     print("figures written to", FIG)
 

@@ -172,10 +172,22 @@ At 100 UEs the gap does not close with 60 ADMM rounds or 12 outer iterations (27
 by eight domains the coordination, not the inner solver, is the limit. Pruning to four candidates per UE never changed
 the exact optimum.
 
-XY-mixer QAOA on Aer (depth 1, 512 shots, 40 COBYLA iterations) reached the exact optimum on every 4 and 6 UE instance
-(8 to 20 qubits per domain) with 100% one-hot and capacity-feasible samples. The full validation table (ILP, Greedy+LS,
-epigraph ADMM, compact ADMM, compact QAOA at 4 to 8 UEs; size, severity and scenario-count sweeps) is in
-`results/validation_compact_summary.csv`.
+Full validation (`scripts/run_validation_compact.py`; 10 seeds, 5 for the QAOA sets; gaps over feasible schedules):
+
+| Setting (K = number of BSs) | Qubits per domain, compact / epigraph | Compact + XY-QAOA (Aer) | Compact + one-hot annealer | Epigraph + one-hot annealer | Greedy+LS |
+|---|---|---|---|---|---|
+| 4 / 6 / 8 UEs, 2 BS + 2 SAT | 8 to 24 / 133 to 193 | 0.0% (15 of 15 optimal) | 0.0% | 38 to 51% | 0.0% |
+| 10 / 25 UEs, 2 + 2 | 44 / 78 vs 213 / 353 | - | 0.0% | 42.7 / 1.8% | 0.0% |
+| 50 UEs, 4 + 3 | 142 / 704 | - | 11.5% | 38.8% | 6.0% |
+| 75 / 100 UEs, 6 + 4 / 8 + 5 | 159 / 205 | - | 49.9 / 60.5% | not run | 14.4 / 11.5% |
+| 20 UEs, severity mild to extreme | 29 to 66 | - | 0.0% at all levels | 0.2 to 4.7% | 0.0% |
+| 20 UEs, L = 1 / 3 / 5 / 6 | 60 to 77 | - | 0.0 / 3.2 / 6.9 / 0.0% | 74 / 233 / 9.0 / 3.8% | 0 / 0 / 1.1 / 0% |
+
+XY-mixer QAOA (depth 1, 512 shots, 40 COBYLA iterations) reached the exact optimum on every instance whose domains fit
+the 26-qubit statevector cap (12 of 15; the other 3 fell back to the one-hot annealer and were also optimal), with 100%
+one-hot and capacity-feasible samples in every solve. Pruning never changed the exact optimum. The scale limit is at
+50 UEs and beyond, where coordinating five shared satellites across six to eight domains, not the inner solver, is the
+bottleneck. Figures: `figures/validation_compact_*_gap.*`, `figures/qubits_compact_vs_epigraph.*`.
 
 ### Circuit sizes on a Heron processor model (FakeTorino, depth 1, optimization level 3)
 

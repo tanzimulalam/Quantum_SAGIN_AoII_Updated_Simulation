@@ -300,3 +300,77 @@ Qubits / time / local feasibility:
 | L=6     | SENTINEL (SA on penalty QUBO)        |          284 |         5.725 |            0     |
 | L=6     | SENTINEL (SA-XY) + LS polish         |          284 |         0.567 |            1     |
 | L=6     | SENTINEL (SA-XY, one-hot-preserving) |          284 |         0.552 |            1     |
+
+## Compact formulation: optimality gap vs the exact ILP of P3 (mean %, feasible solutions)
+
+### Experiment A
+
+| label   |   Compact dual + QAOA-XY (Aer) |   Compact dual + QAOA-XY/mixed |   Compact dual + QAOA-XY/sa_xy |   Compact dual + SA-XY ADMM |   Epigraph QUBO + SA-XY ADMM |   Greedy+LS |   ILP exact |   ILP on pruned (k=4) |
+|:--------|-------------------------------:|-------------------------------:|-------------------------------:|----------------------------:|-----------------------------:|------------:|------------:|----------------------:|
+| U=4     |                              0 |                            nan |                              0 |                           0 |                        38.18 |           0 |           0 |                     0 |
+| U=6     |                              0 |                            nan |                              0 |                           0 |                        51.05 |           0 |           0 |                     0 |
+| U=8     |                              0 |                              0 |                            nan |                           0 |                        50.78 |           0 |           0 |                     0 |
+
+Qubits per domain (max):
+
+| label   |   Compact dual + QAOA-XY (Aer) |   Compact dual + QAOA-XY/mixed |   Compact dual + QAOA-XY/sa_xy |   Compact dual + SA-XY ADMM |   Epigraph QUBO + SA-XY ADMM |   Greedy+LS |   ILP exact |   ILP on pruned (k=4) |
+|:--------|-------------------------------:|-------------------------------:|-------------------------------:|----------------------------:|-----------------------------:|------------:|------------:|----------------------:|
+| U=4     |                             18 |                            nan |                             32 |                          32 |                          133 |           0 |           0 |                     0 |
+| U=6     |                             24 |                            nan |                             44 |                          44 |                          193 |           0 |           0 |                     0 |
+| U=8     |                             24 |                             38 |                            nan |                          38 |                          191 |           0 |           0 |                     0 |
+
+### Experiment B
+
+| label   |   Compact dual + SA-XY ADMM |   Epigraph QUBO + SA-XY ADMM |   Greedy+LS |   ILP exact |   ILP on pruned (k=4) |
+|:--------|----------------------------:|-----------------------------:|------------:|------------:|----------------------:|
+| U=10    |                        0    |                        42.74 |        0    |           0 |                     0 |
+| U=100   |                       60.53 |                       nan    |       11.47 |           0 |                     0 |
+| U=25    |                        0    |                         1.77 |        0    |           0 |                     0 |
+| U=50    |                       11.53 |                        38.79 |        5.95 |           0 |                    -0 |
+| U=75    |                       49.9  |                       nan    |       14.38 |           0 |                     0 |
+
+Qubits per domain (max):
+
+| label   |   Compact dual + SA-XY ADMM |   Epigraph QUBO + SA-XY ADMM |   Greedy+LS |   ILP exact |   ILP on pruned (k=4) |
+|:--------|----------------------------:|-----------------------------:|------------:|------------:|----------------------:|
+| U=10    |                          44 |                          213 |           0 |           0 |                     0 |
+| U=100   |                         205 |                          nan |           0 |           0 |                     0 |
+| U=25    |                          78 |                          353 |           0 |           0 |                     0 |
+| U=50    |                         142 |                          704 |           0 |           0 |                     0 |
+| U=75    |                         159 |                          nan |           0 |           0 |                     0 |
+
+### Experiment C
+
+| label    |   Compact dual + SA-XY ADMM |   Epigraph QUBO + SA-XY ADMM |   Greedy+LS |   ILP exact |   ILP on pruned (k=4) |
+|:---------|----------------------------:|-----------------------------:|------------:|------------:|----------------------:|
+| extreme  |                           0 |                         0.15 |           0 |           0 |                     0 |
+| mild     |                           0 |                         4.74 |           0 |           0 |                     0 |
+| moderate |                           0 |                         3.83 |           0 |           0 |                     0 |
+| severe   |                           0 |                         4.39 |           0 |           0 |                     0 |
+
+Qubits per domain (max):
+
+| label    |   Compact dual + SA-XY ADMM |   Epigraph QUBO + SA-XY ADMM |   Greedy+LS |   ILP exact |   ILP on pruned (k=4) |
+|:---------|----------------------------:|-----------------------------:|------------:|------------:|----------------------:|
+| extreme  |                          29 |                          111 |           0 |           0 |                     0 |
+| mild     |                          66 |                          338 |           0 |           0 |                     0 |
+| moderate |                          66 |                          284 |           0 |           0 |                     0 |
+| severe   |                          35 |                          135 |           0 |           0 |                     0 |
+
+### Experiment D
+
+| label   |   Compact dual + SA-XY ADMM |   Epigraph QUBO + SA-XY ADMM |   Greedy+LS |   ILP exact |   ILP on pruned (k=4) |
+|:--------|----------------------------:|-----------------------------:|------------:|------------:|----------------------:|
+| L=1     |                       -0    |                        73.89 |        0    |           0 |                     0 |
+| L=3     |                        3.17 |                       233.21 |        0    |           0 |                     0 |
+| L=5     |                        6.89 |                         8.95 |        1.13 |           0 |                     0 |
+| L=6     |                        0    |                         3.83 |        0    |           0 |                     0 |
+
+Qubits per domain (max):
+
+| label   |   Compact dual + SA-XY ADMM |   Epigraph QUBO + SA-XY ADMM |   Greedy+LS |   ILP exact |   ILP on pruned (k=4) |
+|:--------|----------------------------:|-----------------------------:|------------:|------------:|----------------------:|
+| L=1     |                          60 |                          333 |           0 |           0 |                     0 |
+| L=3     |                          74 |                          291 |           0 |           0 |                     0 |
+| L=5     |                          77 |                          295 |           0 |           0 |                     0 |
+| L=6     |                          66 |                          284 |           0 |           0 |                     0 |
