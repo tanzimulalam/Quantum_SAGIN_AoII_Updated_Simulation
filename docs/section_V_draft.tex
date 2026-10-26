@@ -1,0 +1,129 @@
+% Draft replacement for Section V (Proposed Solution) of the SENTINEL manuscript, in the paper's notation.
+% Uses the macros of main.tex (\mathscr sets, x_{imqh}, \psi^{(\ell)}_{imqh}, c_k^{(\ell)}, z_{jk}, u_{jk}, \varrho).
+% Numbers quoted in comments come from sentinel_sim/RESULTS.md; replace with the final run before submission.
+
+\section{Proposed Solution}
+
+Problem $\mathscr{P}_{2}$ is a robust assignment problem whose only coupling across UEs is the capacity of the
+serving nodes. SENTINEL solves it in three steps: (i) the minimax over scenarios is handled by a classical outer loop
+on scenario weights, so that every quantum subproblem has a linear objective; (ii) each domain's subproblem is encoded
+as a compact QUBO over its decision variables and a few capacity-slack bits, with the one-hot constraint enforced by
+the mixer of the quantum circuit rather than by a penalty; (iii) the domains are coordinated by the sharing form of
+ADMM. Every schedule returned at any step is certified exactly by its worst-case AoII over $\mathscr{L}$.
+
+%-----------------------------------------------------------------------
+\subsection{Scenario-Weight Dualization of the Minimax}
+%-----------------------------------------------------------------------
+
+For any $\mathbf{x}$ feasible for $\mathscr{P}_{2}$ and any weight vector $\mathbf{w}$ in the simplex
+$\Delta_L=\{\mathbf{w}\geq 0,\ \sum_\ell w_\ell=1\}$,
+\begin{equation}
+    \max_{\ell\in\mathscr{L}} c^{(\ell)}(\mathbf{x})
+    =\max_{\mathbf{w}\in\Delta_L}\sum_{\ell\in\mathscr{L}} w_\ell\, c^{(\ell)}(\mathbf{x}),
+    \qquad c^{(\ell)}(\mathbf{x})=\frac{1}{|\mathscr{U}|}\sum_{i}\sum_{(m,q,h)\in\mathscr{A}_i}\psi^{(\ell)}_{imqh}x_{imqh},
+    \label{eq:dual_max}
+\end{equation}
+so $\mathscr{P}_{2}$ is $\min_{\mathbf{x}}\max_{\mathbf{w}}\mathbf{w}^{\top}\mathbf{c}(\mathbf{x})$. We solve it by
+alternating a quantum-assisted inner step on $\mathbf{x}$ for fixed $\mathbf{w}$ with an exponentiated-gradient step on
+$\mathbf{w}$:
+\begin{align}
+    \mathbf{x}^{(t)} &\in \arg\min_{\mathbf{x}\ \text{s.t. D1--D4}}\ \sum_{\ell} w^{(t)}_\ell\, c^{(\ell)}(\mathbf{x}),
+    \label{eq:inner}\\
+    \eta^{(t)} &= \max_{\ell} c^{(\ell)}(\mathbf{x}^{(t)}),
+    \label{eq:cert}\\
+    w^{(t+1)}_\ell &\propto w^{(t)}_\ell \exp\!\bigl(\sigma\, c^{(\ell)}(\mathbf{x}^{(t)})/\eta^{(t)}\bigr),
+    \label{eq:eg}
+\end{align}
+with step $\sigma>0$ and $\mathbf{w}^{(1)}$ uniform. Equation~\eqref{eq:cert} is the exact worst-case AoII of
+$\mathbf{x}^{(t)}$ over $\mathscr{L}$, computed in $\mathcal{O}(L|\mathscr{U}|)$; SENTINEL returns the iterate with
+the smallest $\eta^{(t)}$ together with that value as its certificate. The inner problem~\eqref{eq:inner} has a
+\emph{linear} objective, so it needs neither the epigraph variable nor the scenario slacks of a direct minimax
+encoding; this removes $M_\eta+L\,W_\ell$ auxiliary qubits per domain, which in our instances exceeded the number of
+decision qubits.
+% In the validation the loop reached the exact ILP optimum at 10 and 25 UEs with T = 8 and sigma = 2.
+
+%-----------------------------------------------------------------------
+\subsection{Candidate Pruning}
+%-----------------------------------------------------------------------
+
+The robust pre-elimination of Section~IV-A removes inadmissible combinations. We additionally retain for each UE only
+the $\kappa$ admissible combinations with the smallest worst-case cost $\max_\ell\psi^{(\ell)}_{imqh}$, plus one
+combination per distinct node so that the capacity coupling is preserved, and denote the result
+$\mathscr{A}^{\kappa}_i\subseteq\mathscr{A}_i$. The number of decision qubits per UE is then at most
+$\kappa+|\mathscr{M}|$ instead of $Q_mH_i|\mathscr{M}|$. With $\kappa=4$ the exact optimum of the pruned problem
+coincided with that of the full problem on every instance we tested (10 to 100 UEs).
+
+%-----------------------------------------------------------------------
+\subsection{Compact Domain QUBO}
+%-----------------------------------------------------------------------
+
+For domain $k$ with weights $\mathbf{w}$ and ADMM state $(\mathbf{z}_k,\mathbf{u}_k)$, let
+$a_v=\frac{1}{|\mathscr{U}|}\sum_\ell w_\ell\psi^{(\ell)}_v$ for $v=(i,m,q,h)$, $i\in\mathscr{U}_k$,
+$(m,q,h)\in\mathscr{A}^{\kappa}_i$. The binary vector $\mathbf{w}_k=(\mathbf{x}_k,\boldsymbol{\nu}_k)$ holds the
+decision variables and, for each node $m\in\mathscr{S}^{\mathrm{o}}_k\cup\mathscr{B}_k$, a capacity slack
+$\nu_m=\Delta_\beta\sum_{b}2^b y_{m,b}$ of $W_m=\lceil\log_2(B_m/\Delta_\beta+1)\rceil$ bits. The QUBO is
+\begin{equation}
+    F_k(\mathbf{w}_k)=\sum_{v}a_v x_v
+    +\lambda_{\mathrm{cap}}\!\!\sum_{m\in\mathscr{S}^{\mathrm{o}}_k\cup\mathscr{B}_k}\!\!\bigl(b_m(\mathbf{x}_k)+\nu_m-B_m\bigr)^2
+    +\frac{\varrho}{2}\sum_{j\in\mathscr{S}^{\mathrm{sh}}_k}\bigl(b_j(\mathbf{x}_k)-z_{jk}+u_{jk}\bigr)^2 .
+    \label{eq:Fk_compact}
+\end{equation}
+Constraint D1 is not penalized: the mixer of Section~V-D keeps every UE group one-hot, so on the reachable subspace
+$x_vx_{v'}=0$ for two candidates of the same UE, and the corresponding entries of $\mathbf{Q}^{(k)}$ are dropped.
+Proposition~\ref{prop:penalty} applies with the ADMM term bounded over one-hot assignments
+($b_j\leq\sum_{i\in\mathscr{U}_k}\max_{(j,q,h)\in\mathscr{A}^\kappa_i}\bar\beta^q_j$); bounding it over the whole
+hypercube, as in a direct application of the proposition, inflates $\lambda$ by more than an order of magnitude and
+flattens the energy landscape. The qubit count per domain is
+\begin{equation}
+    \hat{N}_k=\sum_{i\in\mathscr{U}_k}|\mathscr{A}^{\kappa}_i|+\sum_{m\in\mathscr{S}^{\mathrm{o}}_k\cup\mathscr{B}_k}W_m,
+    \label{eq:Nk_compact}
+\end{equation}
+% 22, 34, 46, 58 qubits per domain at 5, 10, 15, 20 UEs with K = 2, versus 120 to 260 for the epigraph encoding.
+
+%-----------------------------------------------------------------------
+\subsection{Ising Mapping and XY-Mixer QAOA}
+%-----------------------------------------------------------------------
+
+The cost Hamiltonian $H_C^{(k)}$ follows from~\eqref{eq:ising_sub}--\eqref{eq:h_J} applied to~\eqref{eq:Fk_compact}.
+For the mixer we replace the transverse field on the decision qubits by a ring XY Hamiltonian on each UE group,
+\begin{equation}
+    H_{M}^{(k)}=\sum_{i\in\mathscr{U}_k}\ \sum_{(a,a')\in\mathrm{ring}(\mathscr{A}^{\kappa}_i)}
+    \tfrac{1}{2}\bigl(\sigma^x_a\sigma^x_{a'}+\sigma^y_a\sigma^y_{a'}\bigr)
+    +\sum_{a\in\text{slack}}\sigma^x_a ,
+    \label{eq:HM_xy}
+\end{equation}
+where $\mathrm{ring}(\cdot)$ denotes adjacent pairs in a cyclic ordering of the group. Each XY term conserves the
+Hamming weight of its group, so every Trotter factor of $e^{-\mathrm{i}\theta H_M^{(k)}}$ does as well, and a state
+initialized in the one-hot subspace stays in it exactly. We initialize each group either in its $W$ state (the uniform
+superposition of its one-hot basis states, prepared with a linear-depth ladder of controlled rotations) or in the
+basis state of the greedy assignment (warm start). The angles $(\boldsymbol{\gamma},\boldsymbol{\theta})$ are
+optimized classically on the sampled energy; the sampled bitstrings are decoded classically, infeasible samples are
+discarded, and the feasible sample with the smallest value of~\eqref{eq:Fk_compact} is returned.
+% Noiseless: exact optimum on all 15 instances with 4 to 8 UEs (8 to 24 qubits), 100% feasible samples.
+% Heron noise models: 36 to 70% of shots remain feasible; best surviving sample = noiseless optimum.
+
+%-----------------------------------------------------------------------
+\subsection{Distributed Coordination}
+%-----------------------------------------------------------------------
+
+The domains share the satellites' bandwidth and are coordinated by the sharing form of ADMM~\cite{Boyd2011} with the
+updates~\eqref{eq:z_update}--\eqref{eq:u_update}. Two details are essential. First, the targets $z_{jk}$ are
+initialized from an uncoupled round ($\varrho=0$) and projected onto capacity, not from the equal share $B_j/K_j$;
+with equal-share targets and a two-sided quadratic penalty, every domain is drawn toward using exactly its share of
+every shared satellite, which we observed to degrade the schedule by 60 to 560\% at 50 to 100 UEs. Second, $\varrho$ is
+scaled to the mean per-UE spread of the weighted costs $a_v$ so that one bandwidth unit of deviation costs about one
+typical per-UE cost difference, and is then adapted by residual balancing. The complete procedure is summarized in
+Algorithm~\ref{alg:SENTINEL}. % <- update the algorithm environment: outer loop (eq:eg) around the ADMM rounds,
+% inner solve by XY-QAOA when \hat N_k fits the device, certificate by (eq:cert), return best certified iterate.
+
+%-----------------------------------------------------------------------
+\subsection{Solution Quality, Certification, and Resource Scaling}
+%-----------------------------------------------------------------------
+
+The certificate does not depend on the solver: for any returned $\mathbf{x}$, $\eta=\max_\ell c^{(\ell)}(\mathbf{x})$
+is exact. The quality of SENTINEL is therefore assessed empirically against an exact integer linear program of
+$\mathscr{P}_3$ in Section~VI. We find (Section~VI-C) that the compact formulation reaches the exact optimum through
+25 UEs and stays within 12\% at 50 UEs, and that its limit at 75 to 100 UEs is the coordination of five shared
+satellites among six to eight domains rather than the inner solver. The qubit count~\eqref{eq:Nk_compact} grows with
+$\kappa|\mathscr{U}_k|$ and is independent of $L$; the two-qubit gate count of the cost layer is governed by the number
+of candidate pairs that share a node.
