@@ -11,12 +11,12 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 RES, FIG = ROOT / "results", ROOT / "figures"
 FIG.mkdir(exist_ok=True)
 
-POLICY_ORDER = ["random", "threshold", "nominal", "sentinel", "sentinel_triggered", "sentinel_capped_trigger"]
+POLICY_ORDER = ["random", "ppo", "threshold", "nominal", "sentinel", "sentinel_triggered", "sentinel_capped_trigger"]
 TOPO_ORDER = ["Ground only (2 BS)", "Satellite only (2 SAT)", "Integrated (1 BS + 1 SAT)", "Integrated (2 BS + 2 SAT)", "Integrated (3 BS + 3 SAT)"]
-POLICY_LABEL = {"random": "Random", "threshold": "AoII threshold (state-aware)", "nominal": "Nominal (non-robust) SENTINEL",
+POLICY_LABEL = {"random": "Random", "ppo": "PPO (AoII reward, trained)", "threshold": "AoII threshold (state-aware)", "nominal": "Nominal (non-robust) SENTINEL",
                 "sentinel": "SENTINEL (robust)", "sentinel_triggered": "SENTINEL + state-aware trigger",
                 "sentinel_capped_trigger": "SENTINEL + rate-capped trigger"}
-COLORS = {"random": "#7f7f7f", "threshold": "#1f77b4", "nominal": "#ff7f0e", "sentinel": "#d62728", "sentinel_triggered": "#9467bd",
+COLORS = {"random": "#7f7f7f", "ppo": "#bcbd22", "threshold": "#1f77b4", "nominal": "#ff7f0e", "sentinel": "#d62728", "sentinel_triggered": "#9467bd",
           "sentinel_capped_trigger": "#17becf"}
 METRICS = [("average_aoii", "Average AoII"), ("peak_aoii", "Peak AoII"), ("delivery_ratio", "Delivery ratio"),
            ("informative_ratio", "Informative update ratio"), ("sum_rate_mbps", "Delivered goodput (Mbps)"),

@@ -10,7 +10,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 RES = ROOT / "results"
 
 
-def build_tasks(seeds, which, formulation="compact", sat_model="synthetic", ntn=False, no_ack=False):
+def build_tasks(seeds, which, formulation="compact", sat_model="synthetic", ntn=False, no_ack=False, policies=None):
     base = FullConfig()
     base.solver.formulation = formulation
     base.net.sat_model = sat_model
@@ -22,7 +22,7 @@ def build_tasks(seeds, which, formulation="compact", sat_model="synthetic", ntn=
     if sat_model == "tle":
         base.net.min_elevation_deg = 25.0        # typical NTN user-terminal mask for a dense LEO constellation
     base.solver.solver = "sa_xy"           # one-hot-preserving annealer; formulation set by --formulation
-    policies = ["random", "threshold", "nominal", "sentinel", "sentinel_triggered", "sentinel_capped_trigger"]
+    policies = policies or ["random", "threshold", "nominal", "sentinel", "sentinel_triggered", "sentinel_capped_trigger"]
     tasks = []
     if which in ("ue", "all"):
         for U in (5, 10, 15, 20):
@@ -53,10 +53,12 @@ if __name__ == "__main__":
     ap.add_argument("--sat-model", default="synthetic", choices=["synthetic", "tle"])
     ap.add_argument("--ntn", action="store_true", help="enable the TR 38.811 large-scale NTN channel model")
     ap.add_argument("--no-ack", action="store_true", help="ablation: disable ACK-based link-failure handling for all policies")
+    ap.add_argument("--policies", default=None, help="comma-separated subset of policies (default: all six)")
     ap.add_argument("--out-prefix", default="sweeps", help="prefix of the output CSV files")
     args = ap.parse_args()
     seeds = list(range(1, args.seeds + 1))
-    tasks = build_tasks(seeds, args.which, args.formulation, args.sat_model, args.ntn, args.no_ack)
+    tasks = build_tasks(seeds, args.which, args.formulation, args.sat_model, args.ntn, args.no_ack,
+                        args.policies.split(",") if args.policies else None)
     if args.x_filter is not None:
         tasks = [t for t in tasks if str(t["x_value"]) == args.x_filter]
     print(f"{len(tasks)} tasks on {args.workers} workers", flush=True)
@@ -77,7 +79,9 @@ if __name__ == "__main__":
     tag = f"_{args.tag}" if args.tag else ""
     if args.append and (RES / f"{args.out_prefix}_raw.csv").exists():
         old = pd.read_csv(RES / f"{args.out_prefix}_raw.csv")
-        old = old[~((old.sweep.isin(raw.sweep.unique())) & (old.x_value.astype(str).isin(raw.x_value.astype(str).unique())))]
+        key = ["sweep", "x_value", "policy", "seed", "disruption_mode"]
+        new_keys = set(map(tuple, raw[key].astype(str).values.tolist()))
+        old = old[[tuple(k) not in new_keys for k in old[key].astype(str).values.tolist()]]   # replace only the rows re-run
         raw = pd.concat([old, raw], ignore_index=True)
         rows = raw.to_dict("records")
         tag = ""

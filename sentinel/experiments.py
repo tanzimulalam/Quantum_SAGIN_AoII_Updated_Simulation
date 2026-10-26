@@ -43,7 +43,11 @@ def run_seed(task: Dict) -> List[Dict]:
         if task.get("disruption_modes") and dis_flag not in task["disruption_modes"]:
             continue
         for pol in task["policies"]:
-            r = run_policy(ep, pol, plan=plans.get(pol))
+            if pol == "ppo":
+                from .rl import run_ppo_policy, model_path
+                r = run_ppo_policy(ep, model_path(cfg.net.num_ues, cfg.net.sat_model, cfg.dis.ntn_model))
+            else:
+                r = run_policy(ep, pol, plan=plans.get(pol))
             row = r.to_row()
             row.update({"sweep": task["sweep"], "x_label": task["x_label"], "x_value": task["x_value"],
                         "disruption_mode": dis_flag, "num_scenarios": 6 if pol in ("sentinel", "sentinel_triggered", "sentinel_capped_trigger") else (1 if pol == "nominal" else 0),

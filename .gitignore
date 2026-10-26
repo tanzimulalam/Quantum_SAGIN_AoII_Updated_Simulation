@@ -8,3 +8,4 @@ results/*_v0_*.csv
 results/validation_log_v0.txt
 .DS_Store
 Thumbs.db
+models/
