@@ -79,26 +79,41 @@ def build_xy_circuit(dq, depth: int = 1, init: str = "w", warm_start_sel=None, s
     return qc, gammas, betas, scale
 
 
-def decode_xy_counts(dq, inst, counts: dict):
-    """Classical decoding. Returns (best_sel, best_assignment_energy, mean_qubo_energy, onehot_frac, feasible_frac)."""
+def decode_xy_counts(dq, inst, counts: dict, objective: str = "implied"):
+    """Classical decoding. Returns (best_sel, best_assignment_energy, mean_energy, onehot_frac, feasible_frac).
+
+    mean_energy is the quantity the classical optimizer minimizes: with objective="implied" it is the mean over
+    one-hot samples of the assignment energy with slack bits set optimally (non-one-hot samples count as the worst
+    one-hot energy seen plus one penalty unit); with objective="qubo" it is the raw QUBO energy of the full bitstring.
+    """
     n = dq.n
     total = sum(counts.values())
     e_sum = 0.0
     onehot = 0
     feasible = 0
     best_sel, best_e = None, np.inf
+    worst_seen = 0.0
+    bad = 0
     for key, c in counts.items():
         w = np.array([int(key[n - 1 - a]) for a in range(n)], dtype=float)
-        e_sum += c * (w @ dq.Q @ w + dq.const)
         xk = w[: dq.n_x]
+        if objective == "qubo":
+            e_sum += c * (w @ dq.Q @ w + dq.const)
         if dq.is_onehot(xk):
             onehot += c
             sel = dq.sel_from_x(xk)
+            e = dq.assignment_energy(sel, inst)
+            if objective != "qubo":
+                e_sum += c * e
+            worst_seen = max(worst_seen, e)
             if dq.local_feasible(xk, inst):
                 feasible += c
-                e = dq.assignment_energy(sel, inst)
                 if e < best_e:
                     best_sel, best_e = sel, e
+        else:
+            bad += c
+    if objective != "qubo":
+        e_sum += bad * (worst_seen + dq.lam_cap)
     return best_sel, float(best_e), e_sum / total, onehot / total, feasible / total
 
 

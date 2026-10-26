@@ -226,6 +226,20 @@ def run_policy(ep: Episode, policy: str, plan: Optional[List[ScheduleEpoch]] = N
     fail_since = np.full(U, -1, dtype=int)                 # slot of the first failure of the current streak (-1: none)
     blocked_until = np.zeros((U, M), dtype=int)            # slot until which UE i avoids node m
     reactive_resolves = 0
+    pending_resolve = False
+    # end of the current satellite pass for (slot j, UE i): the next interval at which the slot changes satellite
+    # (TLE model: recorded switches) or the UE's visibility of the slot changes (synthetic model)
+    vis_sig = ep.topology.sat_visible                      # (S, T_int, U)
+    switch_ints = {}
+    for (jj, kk_, _nm) in (getattr(ep.topology, "sat_switches", None) or []):
+        switch_ints.setdefault(jj, []).append(kk_)
+    def pass_end_slot(j, kk, i):
+        nxt = [x for x in switch_ints.get(j, []) if x > kk]
+        k_switch = min(nxt) if nxt else ep.num_intervals
+        k2 = kk
+        while k2 + 1 < min(k_switch, ep.num_intervals) and vis_sig[j, k2 + 1, i] == vis_sig[j, kk, i]:
+            k2 += 1
+        return min(k2 + 1, k_switch) * I
     scen_full = build_scenarios(cfg.dis, cfg.net.num_sat, 6)
     scen_plan = build_scenarios(cfg.dis, cfg.net.num_sat, 1 if policy == "nominal" else 6)
     for t in range(1, T):
@@ -308,19 +322,13 @@ def run_policy(ep: Episode, policy: str, plan: Optional[List[ScheduleEpoch]] = N
                 persistent = (t - fail_since[failed]) >= cfg.sim.failure_window_slots
                 newly = failed[persistent]
                 if len(newly):
-                    blocked_until[newly, n_i[~ok][persistent]] = t + cfg.sim.failure_block_slots
+                    for i_u, m_u in zip(newly, n_i[~ok][persistent]):
+                        until = t + cfg.sim.failure_block_slots
+                        if m_u >= B:
+                            until = max(until, pass_end_slot(m_u - B, k, i_u))      # a dead satellite pass stays dead
+                        blocked_until[i_u, m_u] = until
                     fail_since[newly] = -1
-                    if plan is not None and cfg.sim.reactive_resolve:
-                        excl = blocked_until > t
-                        inst_r = build_instance(cfg, ep.topology, ep.sources, scen_plan, k, horizon_intervals=1, exclude_mask=excl)
-                        if cfg.solver.formulation == "compact":
-                            res_r = compact_sentinel_solve(inst_r, cfg.solver, seed=ep.seed + t, outer_iterations=cfg.solver.dual_outer_iterations,
-                                                           k_cand=cfg.solver.k_cand)
-                        else:
-                            res_r = sentinel_solve(inst_r, cfg.solver, seed=ep.seed + t)
-                        sel_r = inst_r.assignment_from_x(res_r.x)
-                        node = inst_r.var_node[sel_r].copy(); bw = inst_r.var_bw_mhz[sel_r] * 1e6; period = inst_r.var_period[sel_r].copy()
-                        reactive_resolves += 1
+                    pending_resolve = True
             if ok.any():
                 good = idx[ok]
                 deliveries += len(good)
@@ -337,6 +345,19 @@ def run_policy(ep: Episode, policy: str, plan: Optional[List[ScheduleEpoch]] = N
                 bsm = gn < B
                 lat_bs += lat[bsm].sum(); n_bs += int(bsm.sum())
                 lat_sat += lat[~bsm].sum(); n_sat += int((~bsm).sum())
+        # batched reactive re-solve: at most once per orchestration interval
+        if pending_resolve and plan is not None and cfg.sim.reactive_resolve and (t % I == 0 or t == 1):
+            pending_resolve = False
+            excl = blocked_until > t
+            inst_r = build_instance(cfg, ep.topology, ep.sources, scen_plan, k, horizon_intervals=1, exclude_mask=excl)
+            if cfg.solver.formulation == "compact":
+                res_r = compact_sentinel_solve(inst_r, cfg.solver, seed=ep.seed + t, outer_iterations=cfg.solver.dual_outer_iterations,
+                                               k_cand=cfg.solver.k_cand)
+            else:
+                res_r = sentinel_solve(inst_r, cfg.solver, seed=ep.seed + t)
+            sel_r = inst_r.assignment_from_x(res_r.x)
+            node = inst_r.var_node[sel_r].copy(); bw = inst_r.var_bw_mhz[sel_r] * 1e6; period = inst_r.var_period[sel_r].copy()
+            reactive_resolves += 1
         # --- AoII update --------------------------------------------------------------------
         correct = X[t] == est
         last_correct[correct] = t
