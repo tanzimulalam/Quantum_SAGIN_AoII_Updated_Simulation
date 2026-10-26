@@ -199,8 +199,11 @@ Removing the one-hot penalty and the within-UE couplings cut the counts by 25 to
 
 Device noise breaks the one-hot structure in 46 to 65% of the shots, but the classical decoder discards those, and the
 best surviving sample equals the noiseless optimum in both domains. The schedule decoded from the noisy samples has
-eta = 2.5062, identical to the exact ILP optimum (`results/hardware/fake_U6_k4_p1_s1_greedy/`). The same script submits
-these two circuits to a real device with `--mode device`, using one sampling job per domain (a few seconds of QPU time).
+eta = 2.5062, identical to the exact ILP optimum (`results/hardware/fake_U6_k4_p1_s1_greedy/`).
+
+On the Heron r2 model (FakeFez) the same circuits (139 and 301 two-qubit gates) keep 69.6% and 47.6% of the shots
+valid, and the decoded schedule is again the exact optimum. The same script submits these circuits to a real device
+with `--mode device`, one sampling job per domain (a few seconds of QPU time).
 
 ## Summary of what the results support
 
