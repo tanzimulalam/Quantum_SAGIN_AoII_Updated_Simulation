@@ -272,6 +272,24 @@ Topology at 10 UEs (median): ground-only 63 to 73 for every policy; satellite-on
 - Cost: 20 to 58 qubits per domain, 34 re-solve epochs plus 8 to 28 reactive re-solves per run, 34 to 223 s of
   solver time per 10-minute run.
 
+### Ablation: no ACK-based link-failure handling (same model, UE sweep, 30 seeds)
+
+`results/sweeps_tle_ntn_noack_*`, `figures/tle_ntn_noack/`. Median average AoII, disruption on:
+
+| UEs | Random | AoII threshold | Nominal | Robust SENTINEL | SENTINEL + trigger |
+|---|---|---|---|---|---|
+| 5 | 6.81 | 1.87 | 1.54 | 1.35 | 1.32 |
+| 10 | 6.70 | 2.14 | 1.16 | 1.50 | 1.48 |
+| 15 | 6.78 | 2.39 | 2.41 | 1.56 | 1.41 |
+| 20 | 6.75 | 2.49 | 1.90 | 1.75 | 1.55 |
+
+Without feedback every policy is an order of magnitude worse (a dead NLOS pass is simply ridden out), the certificate
+holds in 88% of epochs instead of 98.7%, and the ranking flips: the robust SENTINEL schedules are the best (median 1.35
+to 1.75) and the state-aware threshold the worst non-random policy (1.87 to 2.49), because the robust schedule keeps a
+quarter of the UEs on BSs that no satellite shadowing can touch while the threshold policy puts 98% of traffic on the
+best nominal satellite. The robust hedge is therefore worth 20 to 45% in median AoII when the system has no link-failure
+feedback, and close to nothing once every policy can react to failures. Both regimes should be reported.
+
 ## Summary of what the results support
 
 - The renewal-interval decomposition is correct (Monte Carlo agreement within 1%), and the exact ILP of P3 is solvable

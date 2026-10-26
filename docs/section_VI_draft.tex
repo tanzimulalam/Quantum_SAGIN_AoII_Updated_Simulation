@@ -92,7 +92,11 @@ is 16\% lower ($0.39$ versus $0.46$): robustness buys a guaranteed worst case at
 state-aware threshold policy, given the same ACK feedback as SENTINEL, is the strongest on average AoII ($0.13$ to
 $0.15$); SENTINEL with state-aware triggering is within 10 to 20\% of it while retaining the certificate and routing
 21 to 27\% of deliveries to BSs. Peak AoII is 100 to 250 for every policy, set by the 20-slot handover interruptions
-and the NLOS passes rather than by scheduling.
+and the NLOS passes rather than by scheduling. The value of robustness depends on whether the network can react to
+link failures: with ACK feedback disabled for every policy, median AoII rises by an order of magnitude and the ranking
+inverts, robust SENTINEL becoming the best policy ($1.35$ to $1.75$) and the state-aware threshold the worst non-random
+one ($1.87$ to $2.49$), because the robust schedule keeps a quarter of the UEs on BSs that satellite shadowing cannot
+reach. The robust hedge is thus worth 20 to 45\% in median AoII without failure feedback and close to nothing with it.
 \begin{table}[!t]
 \centering
 \caption{Median Average AoII with Starlink Passes and the TR~38.811 Channel (30 seeds, disruption on)}
