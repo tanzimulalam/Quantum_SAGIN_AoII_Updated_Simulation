@@ -1,0 +1,158 @@
+% Draft replacement for Section VI (Performance Evaluation) and Table I of the SENTINEL manuscript.
+% Numbers are from sentinel_sim/RESULTS.md (compact formulation, 30 seeds). Entries marked TODO-TLE are to be filled
+% from results/sweeps_tle_ntn_summary.csv once that run is final; entries marked TODO-DEVICE from the device run.
+
+\section{Performance Evaluation}
+\label{sec:performance}
+
+We evaluate SENTINEL with the open simulator released with this paper\footnote{\url{https://github.com/tanzimulalam/Quantum_SAGIN_AoII_Updated_Simulation}, commit \texttt{TODO}.}
+under the parameters of Table~\ref{tab:simulation_parameters}, all of which are the values used to produce the figures.
+Each configuration is run for 60{,}000 slots (10~min) and 30 independent seeds; all policies share the topology,
+source trajectories, fading, and disruption realization of a seed. We report medians with interquartile ranges, because
+a few seeds contain simultaneous pass gaps on both satellite planes that dominate means; means and 95\% confidence
+intervals are given in the repository.
+
+\begin{table}[t]
+\centering
+\caption{Simulation Parameters (values used for all figures)}
+\label{tab:simulation_parameters}
+\renewcommand{\arraystretch}{1.15}
+\begin{tabular}{p{0.50\columnwidth} p{0.40\columnwidth}}
+\hline
+\textbf{Parameter} & \textbf{Value} \\
+\hline
+\multicolumn{2}{l}{\emph{Network}} \\
+Number of UEs & $\{5,10,15,20\}$; up to 100 in Sec.~VI-C \\
+BSs / satellite serving slots & 2 / 2 (topology study: 0 to 3 each) \\
+Area; BS height; UE height & $20\times20$~km$^2$; 25~m; 1.5~m \\
+Satellite passes & Starlink TLE snapshot, SGP4, MTSU site; minimum elevation $25^\circ$ (synthetic model: $10^\circ$, max.\ elevation $\mathcal{U}[30^\circ,90^\circ]$) \\
+Domains $K$ & 2 (one BS each; satellites shared); $K=$ number of BSs in Sec.~VI-C \\
+\hline
+\multicolumn{2}{l}{\emph{Channel and resources}} \\
+UE transmit power & 23~dBm \\
+UE--BS: carrier, bandwidth, path loss & 3.5~GHz, 20~MHz, $-147.55+20\log_{10}f+26\log_{10}d+6$~dB, BS gain 15~dBi, NF 7~dB \\
+UE--SAT: carrier, bandwidth, path loss & 12~GHz, 50~MHz, free space $+1$~dB, gains 30~dBi $+$ 30~dBi, NF 9~dB \\
+NTN large-scale model & TR~38.811 suburban: LOS probability, clutter loss, shadow fading per pass; atmospheric $0.5$~dB$/\sin V$ \\
+Bandwidth levels $\bar\beta^q_m$ ($Q_m=3$) & $\{2.5,5,10\}$~MHz, $\Delta_\beta=2.5$~MHz \\
+Spectral-efficiency cap & 6 (BS), 4 (SAT) bit/s/Hz \\
+\hline
+\multicolumn{2}{l}{\emph{Source and AoII}} \\
+Source states; transition matrix & 4; birth--death, self-transition $\mathcal{U}[0.90,0.99]$ per UE \\
+Distortion; AoII budget $\Delta^{II,\max}_i$ & $|x-\hat x|$; 10 \\
+Update periods ($H_i=4$); slot; packet & $\{5,10,20,50\}$ slots; 10~ms; 20~kbit \\
+\hline
+\multicolumn{2}{l}{\emph{Disruption}} \\
+Scenario set ($L=6$) & nominal; shadowing 6~dB/20 slots and 12~dB/30 slots; handover of each SAT (20 slots); joint loss (30 slots) \\
+Realized process (per 1~s interval) & shadowing event per UE--SAT link w.p.\ 0.07; handover failure per SAT w.p.\ 0.03; natural handovers at pass changes \\
+Link-failure handling (all policies) & node blocked after 60 failed slots, for 6~s; SENTINEL re-solves without the link \\
+\hline
+\multicolumn{2}{l}{\emph{Solver}} \\
+Formulation & compact dual, $\kappa=4$, $T=6$ outer iterations, $\sigma=2$ \\
+Local solver & XY-QAOA, depth 1, 512 shots, COBYLA 40 iterations (domains $\le 26$ qubits); one-hot-preserving annealing otherwise \\
+ADMM $\varrho_0$, tolerance, rounds & 1 (scaled to cost spread), $10^{-2}$, 20 \\
+Re-solve & on every satellite visibility change and at least every 30~s \\
+Quantum backend & Qiskit Aer (noiseless); FakeTorino / FakeFez noise models; TODO-DEVICE \\
+\hline
+\end{tabular}
+\end{table}
+
+\textbf{Baselines.} \emph{Random} transmits with probability 0.1 per slot over a uniformly chosen visible node with
+equal bandwidth sharing. \emph{AoII threshold} is a state-aware policy that transmits whenever its AoII is positive, at
+most once per 5 slots, on the node with the best nominal rate. \emph{Nominal SENTINEL} runs the same solver with
+$L=1$. \emph{SENTINEL} is the robust schedule with $L=6$. \emph{SENTINEL + trigger} uses SENTINEL's association and
+bandwidth with transmissions triggered by the observed mismatch, rate-capped at the chosen period. The exact
+reference for Sec.~VI-C is an integer linear program of $\mathscr{P}_3$ solved with HiGHS.
+
+%-----------------------------------------------------------------------
+\subsection{AoII Versus Network Size}
+%-----------------------------------------------------------------------
+
+Fig.~\ref{fig:ue_sweep} shows the median average AoII with the stochastic disruption process active.
+% Numbers (synthetic passes, compact formulation, 30 seeds): see RESULTS.md "Time-domain sweeps with the compact formulation".
+% Random 6.8; threshold 0.138-0.145; nominal 0.269-0.282; robust 0.261-0.268; +trigger 0.145-0.149 at 5..20 UEs.
+Robust SENTINEL holds its AoII constant from 5 to 20 UEs ($0.26$ to $0.27$), whereas the nominal schedule is
+$2$ to $6\%$ worse and its certified worst case is $4$ to $7\%$ higher (Fig.~\ref{fig:certificate}). The robust
+schedule hedges by moving 20 to 25\% of deliveries from satellites to BSs. The state-aware threshold policy has about
+half the AoII of robust SENTINEL because it transmits the moment the estimate is wrong, whereas SENTINEL samples
+periodically without observing the source; SENTINEL with state-aware triggering recovers this gap ($0.145$ to
+$0.149$) while retaining the worst-case certificate and raising the informative-update ratio from $0.23$ to $0.96$.
+
+%-----------------------------------------------------------------------
+\subsection{Certificate Validity, Topology, and Real Passes}
+%-----------------------------------------------------------------------
+
+The realized average AoII stayed at or below the certified worst case in 86\% of orchestration epochs
+(Fig.~\ref{fig:certificate}); every violation coincides with a satellite pass gap longer than any window in
+$\mathscr{L}$, which the synthetic pass model produces in two of thirty seeds. With passes propagated from the Starlink
+snapshot such gaps do not occur, and the dominant satellite disruptions become natural handovers and NLOS passes.
+% TODO-TLE: median AoII table from results/sweeps_tle_ntn_summary.csv; certificate validity; NLOS pass fraction (about 10%).
+% Single-seed preview: threshold 0.72 (needs 0.6 s to detect each dead pass), robust SENTINEL 0.21, +trigger 0.12.
+Fig.~\ref{fig:topology} compares ground-only, satellite-only, and integrated deployments at 10 UEs: two BSs cover
+only the UEs within 5 to 7~km of a $20\times20$~km$^2$ area, so ground-only monitoring fails (median AoII 60 to 78),
+two satellite planes alone bring every policy below $0.4$, and the integrated $2+2$ and $3+3$ topologies are best,
+with SENTINEL routing 21 to 30\% of deliveries to BSs as a hedge.
+
+%-----------------------------------------------------------------------
+\subsection{Validation Against the Exact Minimax Optimum}
+\label{sec:exact_validation}
+%-----------------------------------------------------------------------
+
+Table~\ref{tab:optimality_gap} reports the mean gap to the exact ILP optimum of $\mathscr{P}_3$ over feasible
+schedules (10 seeds; 5 for the QAOA rows).
+\begin{table}[!t]
+\centering
+\caption{Mean Optimality Gap (\%) Above the Exact ILP Optimum of $\mathscr{P}_3$}
+\label{tab:optimality_gap}
+\footnotesize
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{|l|c|c|c|c|c|}
+\hline
+\textbf{Setting} & \textbf{Qubits/domain} & \textbf{XY-QAOA} & \textbf{Compact ADMM} & \textbf{Epigraph ADMM} & \textbf{Greedy+LS} \\
+\hline
+4--8 UEs, 2+2 & 8--24 & 0.0 (15/15 optimal) & 0.0 & 38--51 & 0.0 \\
+10 / 25 UEs, 2+2 & 44 / 78 & -- & 0.0 & 42.7 / 1.8 & 0.0 \\
+50 UEs, 4+3 & 142 & -- & 11.5 & 38.8 & 6.0 \\
+75 / 100 UEs & 159 / 205 & -- & 49.9 / 60.5 & -- & 14.4 / 11.5 \\
+Severity sweep, 20 UEs & 29--66 & -- & 0.0 & 0.2--4.7 & 0.0 \\
+$L=1/3/5/6$, 20 UEs & 60--77 & -- & 0.0/3.2/6.9/0.0 & 74/233/9.0/3.8 & 0/0/1.1/0 \\
+\hline
+\end{tabular}%
+}
+\end{table}
+Three observations follow. First, the XY-mixer QAOA returned the exact optimum on every instance whose domains fit the
+simulator (8 to 24 qubits), with 100\% of samples one-hot and capacity-feasible; the epigraph encoding of a direct
+minimax QUBO, run with the same classical search, is 38 to 51\% above the optimum on the same instances and needs 133 to
+193 qubits. Second, the compact distributed pipeline is exact through 25 UEs and within 12\% at 50 UEs; its limit at
+75 to 100 UEs is the coordination of five shared satellites among six to eight domains, which neither additional ADMM
+rounds nor smaller dual steps resolve, and where greedy association with local search remains within 11 to 14\%.
+Third, candidate pruning with $\kappa=4$ never changed the exact optimum.
+
+%-----------------------------------------------------------------------
+\subsection{Quantum Resources and Device Results}
+%-----------------------------------------------------------------------
+
+Table~\ref{tab:hardware} lists the transpiled circuits for a Heron processor (depth 1, greedy warm start) and the
+results of sampling them on the device noise models. % TODO-DEVICE: add the device row(s) from results/hardware/.
+\begin{table}[!t]
+\centering
+\caption{Hardware-Sized Circuits (6 UEs, $\kappa=4$) and Sampling Results}
+\label{tab:hardware}
+\footnotesize
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{|l|c|c|c|c|c|}
+\hline
+\textbf{Domain} & \textbf{Qubits} & \textbf{2q gates / depth} & \textbf{Backend} & \textbf{Feasible shots} & \textbf{Best sample optimal?} \\
+\hline
+0 & 18 & 137 / 169 & FakeTorino (Heron) & 54.4\% & yes \\
+1 & 20 & 279 / 355 & FakeTorino (Heron) & 35.5\% & yes \\
+0 & 18 & 139 / 188 & FakeFez (Heron r2) & 69.6\% & yes \\
+1 & 20 & 301 / 436 & FakeFez (Heron r2) & 47.6\% & yes \\
+0 & 18 & TODO & TODO-DEVICE & TODO & TODO \\
+\hline
+\end{tabular}%
+}
+\end{table}
+Device noise breaks the one-hot structure of a third to two thirds of the shots; the classical decoder discards them,
+and the best surviving sample equals the noiseless optimum in every case, so the schedule decoded from noisy samples is
+certified at the exact ILP optimum ($\eta=2.506$). Each sampling job uses 2048 to 4096 shots and a few seconds of QPU
+time; all parameter optimization is performed on the simulator.
