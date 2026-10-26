@@ -56,7 +56,16 @@ class OrchestrationEnv:
         self.attempts = 0; self.deliveries = 0; self.informative = 0; self.bits = 0.0
         self.lat_sum = 0.0; self.lat_bs = 0.0; self.lat_sat = 0.0; self.n_bs = 0; self.n_sat = 0; self.sat_sched = 0
         self.last_succ = np.zeros(self.U); self.last_load = np.zeros(self.M)
+        self.fail_since = np.full(self.U, -1, dtype=int); self.blocked_until = np.zeros((self.U, self.M), dtype=int)
         return self.observe()
+
+    def allowed(self):
+        """Visible nodes not currently blocked by ACK feedback (same 60-slot / 600-slot rule as the other policies)."""
+        k = min(self.k, self.ep.num_intervals - 1)
+        a = self.vis_int[k] & ~(self.blocked_until > self.t)
+        none = ~a.any(axis=1)
+        a[none] = self.vis_int[k][none]
+        return a
 
     def observe(self):
         k = min(self.k, self.ep.num_intervals - 1)
@@ -66,7 +75,7 @@ class OrchestrationEnv:
             self.last_succ[:, None],
             (self.ep.X[min(self.t, self.T - 1)] != self.est)[:, None].astype(float),
             self.rates_int[k] / self.rate_norm,
-            self.vis_int[k].astype(float),
+            self.allowed().astype(float),
         ], axis=1)
         glob = np.concatenate([self.last_load / max(self.U, 1), [self.k / self.ep.num_intervals]])
         return np.concatenate([per_ue.ravel(), glob]).astype(np.float32)
@@ -76,10 +85,12 @@ class OrchestrationEnv:
         X = self.ep.X; U, B, M = self.U, self.B, self.M
         k = min(self.k, self.ep.num_intervals - 1)
         node = node_action.astype(int); period = self.periods[period_action.astype(int)]
-        # invisible choice -> fall back to the best visible node
-        bad = ~self.vis_int[k][np.arange(U), node]
+        # invisible or blocked choice -> fall back to the best allowed node
+        allowed = self.allowed()
+        bad = ~allowed[np.arange(U), node]
         if bad.any():
-            node[bad] = np.argmax(np.where(self.vis_int[k][bad], self.rates_int[k][bad], -1.0), axis=1)
+            node[bad] = np.argmax(np.where(allowed[bad], self.rates_int[k][bad], -1.0), axis=1)
+        cfg_sim = self.ep.cfg.sim
         counts = np.bincount(node, minlength=M)
         bw_ue = self.full_bw[node] / np.maximum(counts[node], 1)
         succ = np.zeros(U); att = np.zeros(U)
@@ -102,6 +113,16 @@ class OrchestrationEnv:
                     self.sat_sched += int((~is_bs).sum())
                 ok = rate * self.T_s >= self.D
                 self.attempts += len(idx); att[idx] += 1
+                # ACK feedback: block a node after failure_window_slots of consecutive failures
+                self.fail_since[idx[ok]] = -1
+                failed = idx[~ok]
+                if len(failed):
+                    fresh = self.fail_since[failed] < 0
+                    self.fail_since[failed[fresh]] = t
+                    persistent = (t - self.fail_since[failed]) >= cfg_sim.failure_window_slots
+                    for i_u, m_u in zip(failed[persistent], n_i[~ok][persistent]):
+                        self.blocked_until[i_u, m_u] = t + cfg_sim.failure_block_slots
+                    self.fail_since[failed[persistent]] = -1
                 if ok.any():
                     good = idx[ok]; succ[good] += 1
                     self.deliveries += len(good); self.informative += int((X[t, good] != self.est[good]).sum())
@@ -175,6 +196,7 @@ def train_ppo(cfg: FullConfig, train_seeds: List[int], episodes: int = 300, trai
     env0 = OrchestrationEnv(eps[0]); U, M, H = env0.U, env0.M, env0.H
     model = _make_model(env0.obs_dim, U, M, H); opt = torch.optim.Adam(model.parameters(), lr=lr)
     history = []
+    best_score, best_state = -np.inf, None
     t0 = time.time()
     for ep_i in range(episodes):
         env = OrchestrationEnv(eps[ep_i % len(eps)])
@@ -185,7 +207,7 @@ def train_ppo(cfg: FullConfig, train_seeds: List[int], episodes: int = 300, trai
             with torch.no_grad():
                 ln, lp, v = model(ot)
                 # mask invisible nodes
-                vis = torch.as_tensor(env.vis_int[min(env.k, env.ep.num_intervals - 1)]).unsqueeze(0)
+                vis = torch.as_tensor(env.allowed()).unsqueeze(0)
                 ln = ln.masked_fill(~vis, -1e9)
                 dn, dp = Categorical(logits=ln), Categorical(logits=lp)
                 an, ap = dn.sample(), dp.sample()
@@ -218,12 +240,18 @@ def train_ppo(cfg: FullConfig, train_seeds: List[int], episodes: int = 300, trai
                 opt.zero_grad(); loss.backward(); torch.nn.utils.clip_grad_norm_(model.parameters(), 0.5); opt.step()
         res = env.result()
         history.append({"episode": ep_i, "return": float(np.sum(R)), "avg_aoii": res.average_aoii, "delivery": res.delivery_ratio, "time_s": time.time() - t0})
+        if ep_i >= 50:
+            score = -float(np.mean([h["avg_aoii"] for h in history[-50:]]))      # trailing mean AoII over 50 episodes
+            if score > best_score:
+                best_score, best_state = score, {k_: v_.detach().clone() for k_, v_ in model.state_dict().items()}
         if (ep_i + 1) % log_every == 0:
             h = history[-log_every:]
             print(f"  ep {ep_i+1}/{episodes}: return {np.mean([x['return'] for x in h]):.3f}  avg AoII {np.mean([x['avg_aoii'] for x in h]):.3f}  delivery {np.mean([x['delivery'] for x in h]):.3f}  {time.time()-t0:.0f}s", flush=True)
+    if best_state is not None:
+        model.load_state_dict(best_state)                      # keep the checkpoint with the best trailing-average AoII
     if save is not None:
         save.parent.mkdir(parents=True, exist_ok=True)
-        torch.save({"state_dict": model.state_dict(), "obs_dim": env0.obs_dim, "U": U, "M": M, "H": H, "history": history,
+        torch.save({"state_dict": model.state_dict(), "obs_dim": env0.obs_dim, "U": U, "M": M, "H": H, "history": history, "best_trailing_aoii": -best_score,
                     "train_seeds": list(train_seeds), "episodes": episodes, "train_slots": train_slots}, save)
     return model, history
 
@@ -239,7 +267,7 @@ def run_ppo_policy(ep: Episode, path: pathlib.Path) -> RunResult:
     while not done:
         with torch.no_grad():
             ln, lp, _ = model(torch.as_tensor(obs).unsqueeze(0))
-            vis = torch.as_tensor(env.vis_int[min(env.k, env.ep.num_intervals - 1)]).unsqueeze(0)
+            vis = torch.as_tensor(env.allowed()).unsqueeze(0)
             ln = ln.masked_fill(~vis, -1e9)
             an = ln.argmax(-1).squeeze(0).numpy(); ap = lp.argmax(-1).squeeze(0).numpy()
         obs, _, done, _ = env.step(an, ap)
