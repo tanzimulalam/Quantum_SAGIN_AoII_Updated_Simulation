@@ -32,6 +32,9 @@ Results and figures of the current run are summarised in `RESULTS.md`.
 | `scripts/run_validation.py` | Optimality gaps of the epigraph encoding vs the exact ILP (QAOA at small scale, SA at large scale, severity and L sweeps) |
 | `scripts/run_validation_compact.py` | Same protocol for the compact formulation: ILP, Greedy+LS, epigraph ADMM, compact ADMM, compact QAOA-XY |
 | `scripts/hardware_run.py` | IBM Quantum runner: optimize on the simulator, sample once per domain on a device or a fake-backend noise model, decode and certify |
+| `scripts/qaoa_depth_shots_study.py` | Depth / shots / initial-state study of the XY-QAOA on hardware-sized domains (P of sampling the optimal set vs uniform) |
+| `sentinel/tle_geometry.py` | SGP4 propagation of the Starlink TLE snapshot in `data/`; persistent serving slots with natural handovers |
+| `docs/section_V_draft.tex`, `docs/section_VI_draft.tex`, `docs/hardware_howto.md` | LaTeX drafts of the revised Sections V and VI (with Table I of values actually used) and the device-run guide |
 | `docs/compact_formulation.md` | Mathematics of the compact formulation, XY mixers, ADMM fixes and the hardware protocol, in the manuscript's notation |
 | `scripts/make_figures.py` | All figures (`figures/`) and tables (`results/tables.md`) |
 | `tests/` | Smoke tests |
