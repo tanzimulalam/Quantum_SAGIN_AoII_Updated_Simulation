@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+results/*_log.txt
+results/pip_install.log
+results/*_v0_*.csv
+results/validation_log_v0.txt
+.DS_Store
+Thumbs.db

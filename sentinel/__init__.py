@@ -1,0 +1,1 @@
+"""SENTINEL / VANGUARD reference simulator."""
