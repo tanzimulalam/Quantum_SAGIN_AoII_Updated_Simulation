@@ -83,6 +83,8 @@ instances dominate). Outputs go to `results/` (CSV) and `figures/` (PDF and PNG)
 - `nominal`: the SENTINEL solver run on the nominal scenario only (L = 1), i.e. the non-robust counterpart. Its schedule is still certified on the full scenario set.
 - `sentinel`: robust SENTINEL (L = 6). Periodic sampling at the chosen rate, dedicated bandwidth level, chosen node, re-solved on every satellite visibility change and at least every 30 s.
 - `sentinel_triggered`: the hybrid proposed in the paper's conclusion: SENTINEL's robust association and bandwidth, with transmissions triggered by the observed mismatch.
+- `sentinel_capped_trigger`: same, with the chosen update period acting as a rate cap.
+- `ppo`: a trained actor-critic agent (`sentinel/rl.py`) deciding node and update-period level per UE once per orchestration interval with an AoII reward; train with `scripts/train_rl.py --ues 5,10,15,20 --episodes 5000 --sat-model tle --ntn`, then evaluate with `run_sweeps.py --policies ppo --append`.
 
 ## Physical-layer options
 

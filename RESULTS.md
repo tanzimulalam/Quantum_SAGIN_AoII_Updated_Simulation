@@ -250,12 +250,22 @@ shadowing and handover-failure events as before, ACK-based link-failure handling
 
 Median average AoII, disruption on:
 
-| UEs | Random | AoII threshold | Nominal | Robust SENTINEL | SENTINEL + trigger |
-|---|---|---|---|---|---|
-| 5 | 5.94 | 0.134 | 0.253 | 0.265 | 0.155 |
-| 10 | 6.06 | 0.142 | 0.270 | 0.269 | 0.168 |
-| 15 | 5.87 | 0.142 | 0.269 | 0.264 | 0.155 |
-| 20 | 6.05 | 0.149 | 0.276 | 0.278 | 0.175 |
+| UEs | Random | PPO (trained) | AoII threshold | Nominal | Robust SENTINEL | SENTINEL + trigger |
+|---|---|---|---|---|---|---|
+| 5 | 5.94 | 0.280 | 0.134 | 0.253 | 0.265 | 0.155 |
+| 10 | 6.06 | 0.372 | 0.142 | 0.270 | 0.269 | 0.168 |
+| 15 | 5.87 | 0.413 | 0.142 | 0.269 | 0.264 | 0.155 |
+| 20 | 6.05 | 0.446 | 0.149 | 0.276 | 0.278 | 0.175 |
+
+**PPO baseline** (`sentinel/rl.py`, `scripts/train_rl.py`, models in `models/`): an actor-critic agent that chooses,
+once per orchestration interval, a serving node and an update-period level for every UE (invisible or ACK-blocked
+nodes masked, equal bandwidth sharing), rewarded with minus the mean AoII of the interval plus a small delivery
+bonus; trained for 5000 episodes of 60 intervals per network size on seeds 101 to 130 (disjoint from the evaluation
+seeds), best trailing-average checkpoint kept, evaluated deterministically on the same 30 episodes as every other
+policy. It reaches delivery ratios of 0.93 to 0.94 and a median AoII of 0.28 at 5 UEs, close to the nominal SENTINEL
+schedule, but degrades with the size of its action space (0.45 at 20 UEs), routes 100% of traffic to satellites (it
+never learns the BS hedge), and samples periodically (informative ratio 0.22 to 0.24, like SENTINEL). A first
+training pass of 1500 episodes without ACK masking gave 0.5 to 16 and is kept in `models/v1_1500ep/`.
 
 Topology at 10 UEs (median): ground-only 63 to 73 for every policy; satellite-only 0.14 (threshold) / 0.28 (robust) /
 0.18 (trigger); integrated 2+2 and 3+3 as in the table; integrated 1+1 0.90 / 1.56 / 5.4.
