@@ -1,5 +1,5 @@
 """Figures and tables from results/*.csv -> figures/*.pdf|png and results/tables.md"""
-import sys, pathlib, json
+import sys, pathlib, json, re
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 import numpy as np
 import pandas as pd
@@ -24,6 +24,17 @@ METRICS = [("average_aoii", "Average AoII"), ("peak_aoii", "Peak AoII"), ("deliv
            ("budget_violation_fraction", "Fraction of UEs over AoII budget")]
 
 plt.rcParams.update({"font.size": 9, "axes.grid": True, "grid.alpha": 0.3, "figure.dpi": 150})
+
+
+def _order_labels(labels):
+    """Sort 'U=10'-style or 'L=3'-style labels numerically; keep other labels in first-seen order."""
+    def key(l):
+        m = re.match(r"^[A-Za-z]+=(\d+(\.\d+)?)$", str(l))
+        return (0, float(m.group(1))) if m else (1, 0.0)
+    labels = list(dict.fromkeys(labels))
+    if all(re.match(r"^[A-Za-z]+=(\d+(\.\d+)?)$", str(l)) for l in labels):
+        return sorted(labels, key=key)
+    return labels
 
 
 def bar_sweep(summ, sweep, metric, ylabel, dis_mode, fname, log=False, stat="mean"):
@@ -116,7 +127,7 @@ def main(prefix="sweeps", fig_prefix=""):
         for exp in sorted(v.exp.unique()):
             d = v[v.exp == exp]
             fig, ax = plt.subplots(figsize=(5.2, 3.2))
-            labels = list(dict.fromkeys(d.label))
+            labels = _order_labels(d.label)
             for solver in d.solver.unique():
                 s = d[d.solver == solver].set_index("label").reindex(labels)
                 ax.plot(range(len(labels)), s.gap_mean, marker="o", label=solver)
@@ -144,7 +155,7 @@ def main(prefix="sweeps", fig_prefix=""):
             lines.append(d.pivot_table(index="label", columns="solver", values="gap_mean").round(2).to_markdown() + "\n")
             lines.append("Qubits per domain (max):\n\n" + d.pivot_table(index="label", columns="solver", values="qubits_max").round(0).to_markdown() + "\n")
             fig, ax = plt.subplots(figsize=(5.6, 3.6))
-            labels = list(dict.fromkeys(d.label))
+            labels = _order_labels(d.label)
             for solver in [s_ for s_ in d.solver.unique() if "ILP on pruned" not in s_ and s_ != "ILP exact"]:
                 sub = d[d.solver == solver].set_index("label").reindex(labels)
                 ax.plot(range(len(labels)), sub.gap_mean, marker="o", label=solver)
@@ -155,7 +166,7 @@ def main(prefix="sweeps", fig_prefix=""):
         d = v[(v.exp == "B") & v.solver.isin(["Compact dual + SA-XY ADMM", "Epigraph QUBO + SA-XY ADMM"])]
         if len(d):
             fig, ax = plt.subplots(figsize=(4.6, 3.2))
-            labels = list(dict.fromkeys(d.label))
+            labels = _order_labels(d.label)
             for solver, lab in (("Epigraph QUBO + SA-XY ADMM", "Epigraph encoding (Section V)"), ("Compact dual + SA-XY ADMM", "Compact dual encoding")):
                 sub = d[d.solver == solver].set_index("label").reindex(labels)
                 ax.plot(range(len(labels)), sub.qubits_max, marker="o", label=lab)
