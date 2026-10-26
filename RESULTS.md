@@ -217,6 +217,31 @@ On the Heron r2 model (FakeFez) the same circuits (139 and 301 two-qubit gates) 
 valid, and the decoded schedule is again the exact optimum. The same script submits these circuits to a real device
 with `--mode device`, one sampling job per domain (a few seconds of QPU time).
 
+### What the QAOA layers contribute (noiseless, 6-UE domains of 12 to 24 qubits, 3 seeds x 2 domains x 3 restarts)
+
+`scripts/qaoa_depth_shots_study.py`, `results/qaoa_depth_shots.csv`, `figures/qaoa_depth_shots.*`. The optimizer
+minimizes the mean implied-slack assignment energy of the samples; P(opt) is the probability that a final sample lies in
+the set of optimal assignments (the optimum is degenerate: 3 to 27 of 24 to 576 one-hot states), compared with uniform
+sampling of the one-hot subspace (0.219 on average).
+
+| Initial state | Depth | P(sample in optimal set) at 128 / 512 / 2048 shots | Lift over uniform | Optimum found |
+|---|---|---|---|---|
+| W state | 1 | 0.274 / 0.275 / 0.283 | 1.45 to 1.48 | 100% |
+| W state | 2 | 0.389 / 0.400 / 0.422 | 1.96 to 2.28 | 100% |
+| Greedy basis state | 1 | 0.988 / 0.999 / 1.000 | 14.4 (greedy is already optimal) | 100% |
+| Greedy basis state | 2 | 0.780 / 0.811 / 0.832 | 10.0 to 10.3 | 100% |
+
+Three facts for the paper. (i) On every one of these domain instances the greedy assignment is already optimal, so the
+warm-started circuit "finds" the optimum trivially and deeper circuits only diffuse away from it. (ii) From the W
+state, one QAOA layer concentrates the distribution on the optimal set by a factor of about 1.5 and two layers by
+about 2.2; the shot count per COBYLA evaluation hardly matters above 128. (iii) The optimum is always among the
+samples because the feasible subspace is small; the quantum step is a correct constrained sampler at this scale, not a
+stronger optimizer than greedy. Instances where greedy fails (50 UEs and above, 6 to 14% gaps) need 140 to 200 qubits
+per domain and cannot be simulated. An earlier version of this study compared samples with a single optimal assignment
+and therefore reported P(opt) about 0.02; those files are kept as `results/qaoa_depth_shots_singleopt_metric.csv` and
+`results/qaoa_depth_shots_qubo_objective*.csv` (the latter also used the raw QUBO energy, dominated by slack bits, as
+the optimizer objective).
+
 ## Summary of what the results support
 
 - The renewal-interval decomposition is correct (Monte Carlo agreement within 1%), and the exact ILP of P3 is solvable

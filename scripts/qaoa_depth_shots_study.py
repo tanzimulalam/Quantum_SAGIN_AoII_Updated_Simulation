@@ -31,19 +31,19 @@ def domain_qubos(seed):
     out = []
     for k in range(2):
         dq = build_compact_qubo(inst, k, w, z, u, 0.0, shared, onehot_penalty=False)
-        # exact optimum of the domain objective (uncoupled) by enumeration over one-hot assignments
-        best_e, best_sel = np.inf, None
-        for sel in itertools.product(*[list(g) for g in dq.groups]):
-            e = dq.assignment_energy(np.array(sel), inst)
-            if e < best_e:
-                best_e, best_sel = e, np.array(sel)
-        out.append((k, dq, inst, best_e, best_sel))
+        # exact optimum of the domain objective (uncoupled) by enumeration over one-hot assignments; the optimum is
+        # typically degenerate (several bandwidth/period combinations with identical cost), so keep the whole set
+        energies = {sel: dq.assignment_energy(np.array(sel), inst) for sel in itertools.product(*[list(g) for g in dq.groups])}
+        best_e = min(energies.values())
+        opt_set = {sel for sel, e in energies.items() if abs(e - best_e) < 1e-9}
+        best_sel = np.array(next(iter(opt_set)))
+        out.append((k, dq, inst, best_e, best_sel, opt_set, len(energies)))
     return out
 
 
 def run(task):
     seed, k, depth, shots, init, restart, scale_mode = task
-    for kk, dq, inst, best_e, best_sel in domain_qubos(seed):
+    for kk, dq, inst, best_e, best_sel, opt_set, n_states in domain_qubos(seed):
         if kk != k:
             continue
         g = greedy_sel(dq, inst)
@@ -61,10 +61,11 @@ def run(task):
         for key, c in counts.items():
             wv = np.array([int(key[n - 1 - a]) for a in range(n)], dtype=float)
             xk = wv[: dq.n_x]
-            if dq.is_onehot(xk) and np.array_equal(dq.sel_from_x(xk), best_sel):
+            if dq.is_onehot(xk) and tuple(dq.sel_from_x(xk)) in opt_set:
                 p_opt += c
         return dict(seed=seed, domain=k, qubits=dq.n, depth=depth, shots=shots, init=init, restart=restart, scale_mode=scale_mode,
-                    p_optimal_sample=p_opt / 4096, best_energy=res["best_energy"], optimum=best_e,
+                    p_optimal_sample=p_opt / 4096, p_uniform=len(opt_set) / n_states, optimal_states=len(opt_set), one_hot_states=n_states,
+                    best_energy=res["best_energy"], optimum=best_e,
                     found_optimum=abs(res["best_energy"] - best_e) < 1e-9, feasible_sample_fraction=res["feasible_sample_fraction"],
                     greedy_is_optimal=abs(dq.assignment_energy(g, inst) - best_e) < 1e-9, iterations=len(res["energies"]),
                     time_s=time.time() - t0)

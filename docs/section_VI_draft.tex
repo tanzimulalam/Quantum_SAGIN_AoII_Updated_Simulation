@@ -156,3 +156,11 @@ Device noise breaks the one-hot structure of a third to two thirds of the shots;
 and the best surviving sample equals the noiseless optimum in every case, so the schedule decoded from noisy samples is
 certified at the exact ILP optimum ($\eta=2.506$). Each sampling job uses 2048 to 4096 shots and a few seconds of QPU
 time; all parameter optimization is performed on the simulator.
+
+On these domains the greedy assignment is itself optimal, and the role of the QAOA layers is to concentrate a
+constrained sampler: from the $W$ state, one layer raises the probability of drawing an optimal assignment from the
+uniform $0.22$ to $0.28$ and two layers to $0.42$, independently of the shot count above 128; from the greedy basis
+state the optimum is retained with probability $0.99$ at depth 1. The optimum is contained in the samples in every run
+because the one-hot subspace of a hardware-sized domain has at most a few hundred states. Instances on which greedy
+association is suboptimal (50 UEs and above, Table~\ref{tab:optimality_gap}) require 140 to 200 qubits per domain and
+are beyond simulation; demonstrating a quantum advantage on them is left to hardware with that capacity.
