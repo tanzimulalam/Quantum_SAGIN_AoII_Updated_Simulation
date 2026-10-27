@@ -217,6 +217,24 @@ On the Heron r2 model (FakeFez) the same circuits (139 and 301 two-qubit gates) 
 valid, and the decoded schedule is again the exact optimum. The same script submits these circuits to a real device
 with `--mode device`, one sampling job per domain (a few seconds of QPU time).
 
+### Real device: ibm_kingston (Heron r2, 156 qubits), 27 October 2026
+
+Same instance (6 UEs, k_cand 4, seed 1), depth 1, greedy warm start, 4096 shots, domain 0 only
+(`results/hardware/device_U6_k4_p1_s1_greedy/`, job id `dbgjgr9t9uhs73c8act0`, 3 s of QPU time reported by the service,
+19.5 s sampling wall time including queue). All angle optimization and the ADMM coordination ran on the simulator; the
+device executed only the final sampling circuit.
+
+| Domain | Qubits | Two-qubit gates | Depth | Device one-hot samples | Device feasible samples | Best decoded energy | Noiseless best |
+|---|---|---|---|---|---|---|---|
+| 0 | 18 | 139 | 187 | 63.3% | 63.3% | 1.9799 | 1.9799 |
+
+The best device sample equals the noiseless optimum, and the network schedule decoded from the device samples has
+eta = 2.5062, the exact ILP optimum (gap 0.00%). The surviving-shot fraction (63.3%) lies between the two noise-model
+predictions for this circuit (54.4% on FakeTorino, 69.6% on FakeFez). The mean QUBO energy over all device shots is
+2.61 against 1.98 at the optimum, so the device distribution is visibly noisier than the noiseless one, but the
+classical decoder only needs the best feasible sample. This is the real-hardware counterpart of the noise-model rows
+above and closes the "quantum-assisted" claim at the sizes a current device can hold.
+
 ### What the QAOA layers contribute (noiseless, 6-UE domains of 12 to 24 qubits, 3 seeds x 2 domains x 3 restarts)
 
 `scripts/qaoa_depth_shots_study.py`, `results/qaoa_depth_shots.csv`, `figures/qaoa_depth_shots.*`. The optimizer
@@ -315,6 +333,7 @@ feedback, and close to nothing once every policy can react to failures. Both reg
   epigraph encoding, within 12% at 50 UEs, and limited by shared-satellite coordination at 75 to 100 UEs; the epigraph
   encoding is unusable beyond a few UEs.
 - XY-mixer QAOA solves hardware-sized domains (12 to 24 qubits) to optimality in simulation and recovers the optimum
-  from 36 to 70% surviving shots on Heron noise models; it is a correct constrained sampler (1.5 to 2.2 times the
+  from 36 to 70% surviving shots on Heron noise models and from 63% surviving shots on the real ibm_kingston device
+  (18 qubits, 139 two-qubit gates, 3 s of QPU time, decoded schedule at the exact ILP optimum); it is a correct constrained sampler (1.5 to 2.2 times the
   uniform concentration on the optimal set at depth 1 to 2), not a better optimizer than greedy, which is already
   optimal on these domains.

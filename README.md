@@ -70,8 +70,12 @@ Hardware (IBM Quantum Open Plan). Everything is optimized on the simulator; the 
 .venv/Scripts/python.exe scripts/hardware_run.py --mode device --ues 6 --domains 0              # real device; needs a saved IBM Quantum account
 ```
 
+A device run on `ibm_kingston` (27 October 2026, 18 qubits, 4096 shots, 3 s of QPU time) is in
+`results/hardware/device_U6_k4_p1_s1_greedy/`; the decoded schedule equals the exact ILP optimum (see RESULTS.md).
+
 The device mode never reads a token from the command line or the repository. Save your account once in your own
-Python session with `QiskitRuntimeService.save_account(channel="ibm_quantum_platform", token=..., overwrite=True)`.
+Python session with `QiskitRuntimeService.save_account(channel="ibm_quantum_platform", token=..., overwrite=True)`,
+or run `scripts/save_ibm_account.py <downloaded-key.json>` once; key files are git-ignored.
 
 The 30-seed sweeps take about 25 minutes on 16 cores; the validation about 45 minutes on 8 cores (the QAOA
 instances dominate). Outputs go to `results/` (CSV) and `figures/` (PDF and PNG).

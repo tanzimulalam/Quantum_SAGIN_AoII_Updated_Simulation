@@ -1,6 +1,6 @@
 % Draft replacement for Section VI (Performance Evaluation) and Table I of the SENTINEL manuscript.
-% Numbers are from sentinel_sim/RESULTS.md (compact formulation, 30 seeds). Entries marked TODO-TLE are to be filled
-% from results/sweeps_tle_ntn_summary.csv once that run is final; entries marked TODO-DEVICE from the device run.
+% Numbers are from sentinel_sim/RESULTS.md (compact formulation, 30 seeds, TLE+NTN sweeps) and from the device run in
+% results/hardware/device_U6_k4_p1_s1_greedy/.
 
 \section{Performance Evaluation}
 \label{sec:performance}
@@ -51,7 +51,7 @@ Formulation & compact dual, $\kappa=4$, $T=6$ outer iterations, $\sigma=2$ \\
 Local solver & XY-QAOA, depth 1, 512 shots, COBYLA 40 iterations (domains $\le 26$ qubits); one-hot-preserving annealing otherwise \\
 ADMM $\varrho_0$, tolerance, rounds & 1 (scaled to cost spread), $10^{-2}$, 20 \\
 Re-solve & on every satellite visibility change and at least every 30~s \\
-Quantum backend & Qiskit Aer (noiseless); FakeTorino / FakeFez noise models; TODO-DEVICE \\
+Quantum backend & Qiskit Aer (noiseless); FakeTorino / FakeFez noise models; \texttt{ibm\_kingston} (Heron r2) \\
 \hline
 \end{tabular}
 \end{table}
@@ -164,7 +164,8 @@ Third, candidate pruning with $\kappa=4$ never changed the exact optimum.
 %-----------------------------------------------------------------------
 
 Table~\ref{tab:hardware} lists the transpiled circuits for a Heron processor (depth 1, greedy warm start) and the
-results of sampling them on the device noise models. % TODO-DEVICE: add the device row(s) from results/hardware/.
+results of sampling them on the device noise models and on the \texttt{ibm\_kingston} processor (Heron r2, 156 qubits,
+27 October 2026, job \texttt{dbgjgr9t9uhs73c8act0}).
 \begin{table}[!t]
 \centering
 \caption{Hardware-Sized Circuits (6 UEs, $\kappa=4$) and Sampling Results}
@@ -179,15 +180,18 @@ results of sampling them on the device noise models. % TODO-DEVICE: add the devi
 1 & 20 & 279 / 355 & FakeTorino (Heron) & 35.5\% & yes \\
 0 & 18 & 139 / 188 & FakeFez (Heron r2) & 69.6\% & yes \\
 1 & 20 & 301 / 436 & FakeFez (Heron r2) & 47.6\% & yes \\
-0 & 18 & TODO & TODO-DEVICE & TODO & TODO \\
+0 & 18 & 139 / 187 & \texttt{ibm\_kingston} (device) & 63.3\% & yes \\
 \hline
 \end{tabular}%
 }
 \end{table}
 Device noise breaks the one-hot structure of a third to two thirds of the shots; the classical decoder discards them,
 and the best surviving sample equals the noiseless optimum in every case, so the schedule decoded from noisy samples is
-certified at the exact ILP optimum ($\eta=2.506$). Each sampling job uses 2048 to 4096 shots and a few seconds of QPU
-time; all parameter optimization is performed on the simulator.
+certified at the exact ILP optimum ($\eta=2.506$). On the real device, 63.3\% of 4096 shots decode to one-hot,
+capacity-feasible assignments, between the two noise-model predictions (54.4\% and 69.6\%), and the best device sample
+again equals the noiseless optimum, so the device-decoded schedule attains the exact ILP optimum with a 0.00\% gap. The
+device job used 3~s of QPU time; all parameter optimization and the ADMM coordination were performed on the simulator,
+and the device executed only the final sampling circuit.
 
 On these domains the greedy assignment is itself optimal, and the role of the QAOA layers is to concentrate a
 constrained sampler: from the $W$ state, one layer raises the probability of drawing an optimal assignment from the
