@@ -9,3 +9,7 @@ results/validation_log_v0.txt
 .DS_Store
 Thumbs.db
 models/
+
+# IBM Cloud API key downloads: never commit
+apikey*.json
+*apikey*
