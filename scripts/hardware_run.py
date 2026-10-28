@@ -113,6 +113,8 @@ def main():
     ap.add_argument("--domains", default="all", help="comma-separated domain indices to sample on the device (default all)")
     ap.add_argument("--max-sim-qubits", type=int, default=26, help="largest domain optimized on the statevector simulator; larger domains get transferred angles")
     ap.add_argument("--transfer-from", default=None, help="results/hardware/<tag> whose largest simulated domain donates angles to oversized domains")
+    ap.add_argument("--mitigation", choices=["none", "dd", "dd_twirl"], default="none",
+                    help="device-side error suppression: dynamical decoupling (XY4) and optionally Pauli twirling of gates and measurements")
     args = ap.parse_args()
     tag = args.tag or f"{args.mode}_U{args.ues}_k{args.k_cand}_p{args.depth}_s{args.seed}_{args.init}"
     out = OUT / tag; out.mkdir(parents=True, exist_ok=True)
@@ -134,7 +136,7 @@ def main():
         print("fake backend:", backend.name, flush=True)
 
     summary = {"mode": args.mode, "backend": backend.name, "ues": args.ues, "k_cand": args.k_cand, "depth": args.depth,
-               "shots": args.shots, "ilp_eta": ref, "sim_compact_qaoa_eta": res.eta, "max_sim_qubits": args.max_sim_qubits, "domains": []}
+               "shots": args.shots, "ilp_eta": ref, "sim_compact_qaoa_eta": res.eta, "max_sim_qubits": args.max_sim_qubits, "mitigation": args.mitigation, "domains": []}
     circuits = []
     if args.domains != "all":
         keep = {int(v) for v in args.domains.split(",")}
@@ -166,6 +168,13 @@ def main():
     else:
         from qiskit_ibm_runtime import SamplerV2 as Sampler
         sampler = Sampler(mode=backend)
+        if args.mitigation in ("dd", "dd_twirl"):
+            sampler.options.dynamical_decoupling.enable = True
+            sampler.options.dynamical_decoupling.sequence_type = "XY4"
+        if args.mitigation == "dd_twirl":
+            sampler.options.twirling.enable_gates = True
+            sampler.options.twirling.enable_measure = True
+            sampler.options.twirling.num_randomizations = "auto"
         job = sampler.run(circuits, shots=args.shots)
         print("job id:", job.job_id(), flush=True)
         job_result = job.result()
@@ -198,7 +207,7 @@ def main():
     eta, l = pruned.worst_case(x)
     summary.update({"hw_schedule_eta": eta, "hw_schedule_feasible": bool(pruned.is_feasible(x)), "hw_gap_pct_vs_ilp": 100 * (eta / ref - 1)})
     (out / "summary.json").write_text(json.dumps(summary, indent=2, default=float))
-    md = [f"# Hardware run `{tag}`", "", f"backend: {backend.name}; {args.ues} UEs; k_cand {args.k_cand}; depth {args.depth}; {args.shots} shots per domain", "",
+    md = [f"# Hardware run `{tag}`", "", f"backend: {backend.name}; {args.ues} UEs; k_cand {args.k_cand}; depth {args.depth}; {args.shots} shots per domain; mitigation {args.mitigation}", "",
           f"ILP optimum eta = {ref:.4f}; simulator compact-QAOA eta = {res.eta:.4f}; device-decoded schedule eta = {eta:.4f} "
           f"(gap {100*(eta/ref-1):+.2f}%), feasible = {pruned.is_feasible(x)}", "",
           "| domain | qubits | 2q gates | depth | sim feasible frac | hw one-hot frac | hw feasible frac | sim best E | hw best E |", "|---|---|---|---|---|---|---|---|---|"]

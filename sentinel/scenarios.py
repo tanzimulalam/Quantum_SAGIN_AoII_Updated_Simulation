@@ -24,7 +24,8 @@ def build_scenarios(cfg: DisruptionConfig, num_sat: int, num_scenarios: int = 6)
     """
     S = num_sat
     scen = [Scenario("nominal", np.zeros(S), 0)]
-    scen.append(Scenario("mild_shadowing", np.full(S, cfg.mild_shadowing_db), cfg.mild_window_slots))
+    if getattr(cfg, "mild_scenario", True):
+        scen.append(Scenario("mild_shadowing", np.full(S, cfg.mild_shadowing_db), cfg.mild_window_slots))
     scen.append(Scenario("severe_shadowing", np.full(S, cfg.severe_shadowing_db), cfg.severe_window_slots))
     for j in range(S):
         loss = np.zeros(S)

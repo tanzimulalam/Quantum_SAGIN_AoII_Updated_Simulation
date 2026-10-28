@@ -1,0 +1,45 @@
+{
+  "mode": "device",
+  "backend": "ibm_kingston",
+  "ues": 6,
+  "k_cand": 4,
+  "depth": 1,
+  "shots": 4096,
+  "ilp_eta": 2.060714735852709,
+  "sim_compact_qaoa_eta": 2.060714735852709,
+  "max_sim_qubits": 26,
+  "mitigation": "none",
+  "domains": [
+    {
+      "domain": 0,
+      "n_qubits": 24,
+      "decision_qubits": 20,
+      "two_qubit_gates": 305,
+      "transpiled_depth": 386,
+      "sim_feasible_sample_fraction": 1.0,
+      "sim_best_energy": 1.5650877741525744,
+      "greedy_energy": 1.5650877741525744,
+      "estimated_qpu_s_upper": 8.192,
+      "params": [
+        -0.002933606351237135,
+        0.8220723145601335
+      ],
+      "param_names": [
+        "b0",
+        "g0"
+      ],
+      "params_source": "simulator",
+      "hw_onehot_sample_fraction": 0.25048828125,
+      "hw_feasible_sample_fraction": 0.25048828125,
+      "hw_best_energy": 1.5650877741525744,
+      "hw_mean_qubo_energy": 4.256756311729646,
+      "hw_matches_sim_best": true
+    }
+  ],
+  "job_id": "dbgnj9cdgr2s73crsme0",
+  "usage_s": 3,
+  "sampling_wall_s": 1768.7584369182587,
+  "hw_schedule_eta": 2.060714735852709,
+  "hw_schedule_feasible": true,
+  "hw_gap_pct_vs_ilp": 0.0
+}

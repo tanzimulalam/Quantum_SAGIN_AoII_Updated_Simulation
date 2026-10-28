@@ -10,8 +10,10 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 RES = ROOT / "results"
 
 
-def build_tasks(seeds, which, formulation="compact", sat_model="synthetic", ntn=False, no_ack=False, policies=None):
+def build_tasks(seeds, which, formulation="compact", sat_model="synthetic", ntn=False, no_ack=False, policies=None,
+                no_mild=False):
     base = FullConfig()
+    base.dis.mild_scenario = not no_mild
     base.solver.formulation = formulation
     base.net.sat_model = sat_model
     base.dis.ntn_model = ntn
@@ -74,11 +76,12 @@ if __name__ == "__main__":
     ap.add_argument("--ntn", action="store_true", help="enable the TR 38.811 large-scale NTN channel model")
     ap.add_argument("--no-ack", action="store_true", help="ablation: disable ACK-based link-failure handling for all policies")
     ap.add_argument("--policies", default=None, help="comma-separated subset of policies (default: all six)")
+    ap.add_argument("--no-mild", action="store_true", help="drop the mild-shadowing scenario from the robust scenario set (L = 5)")
     ap.add_argument("--out-prefix", default="sweeps", help="prefix of the output CSV files")
     args = ap.parse_args()
     seeds = list(range(args.seed_start, args.seeds + 1))
     tasks = build_tasks(seeds, args.which, args.formulation, args.sat_model, args.ntn, args.no_ack,
-                        args.policies.split(",") if args.policies else None)
+                        args.policies.split(",") if args.policies else None, args.no_mild)
     if args.x_filter is not None:
         tasks = [t for t in tasks if str(t["x_value"]) == args.x_filter]
     print(f"{len(tasks)} tasks on {args.workers} workers", flush=True)

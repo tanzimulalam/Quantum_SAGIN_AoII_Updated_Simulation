@@ -251,6 +251,27 @@ device 63 and 43%). At the 38-qubit scale the device still contains the optimum 
 two-qubit gates would push the feasible fraction below one shot in a thousand; that, and not the simulator, is now the
 documented limit of the quantum step.
 
+### Error suppression on the device (ibm_kingston, 28 October 2026, `--mitigation`)
+
+The two largest domains were re-sampled in one session with no suppression (control), with dynamical decoupling
+(XY4 sequence on idle qubits), and with dynamical decoupling plus Pauli twirling of two-qubit gates and measurements,
+4096 shots each (`results/hardware/device_*_ctrl`, `*_dd`, `*_ddtwirl`):
+
+| Domain | Qubits | 2q gates | Previous day, none | Control, none | DD | DD + twirling | Best sample = optimum |
+|---|---|---|---|---|---|---|---|
+| 6 UEs seed 3, domain 0 | 24 | 305 | 34.8% | 25.0% | 21.1% | 13.8% | yes in all four |
+| 10 UEs seed 1, domain 0 | 38 | 606 | 2.6% | 2.4% | 0.7% | 0.2% | yes in all four |
+
+Two things follow. The feasible-shot fraction of the same circuit on the same device moves by about ten points
+between calibration sessions (34.8% versus 25.0%), so device results must be compared within a session, which is
+why a control was run. And neither suppression technique helps this circuit family: dynamical decoupling lowers the
+yield slightly (21% versus 25%, 0.7% versus 2.4%) and twirling halves it again. The circuits are dense and have
+almost no idle time, so decoupling pulses add gate error without cancelling idle dephasing, and twirling inserts
+additional single-qubit gates and randomizes the coherent part of the error; twirling is designed to make noise
+Pauli-like for expectation-value estimation, not to raise the yield of valid samples. The best sample still equalled
+the noiseless optimum in every run, so the decoded schedule was unaffected. The paper can state that the unmitigated
+numbers above are the relevant ones and that error suppression of this kind does not extend the scale limit.
+
 ### What the QAOA layers contribute (noiseless, 6-UE domains of 12 to 24 qubits, 3 seeds x 2 domains x 3 restarts)
 
 `scripts/qaoa_depth_shots_study.py`, `results/qaoa_depth_shots.csv`, `figures/qaoa_depth_shots.*`. The optimizer

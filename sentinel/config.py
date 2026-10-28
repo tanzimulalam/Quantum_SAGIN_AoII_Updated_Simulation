@@ -76,6 +76,7 @@ class SourceConfig:
 class DisruptionConfig:
     """Scenario set L used by the robust optimizer and the stochastic process used by the simulator."""
     mild_shadowing_db: float = 6.0
+    mild_scenario: bool = True                     # include the mild-shadowing scenario in L (never binds; see the L sweep)
     severe_shadowing_db: float = 12.0
     mild_window_slots: int = 20
     severe_window_slots: int = 30

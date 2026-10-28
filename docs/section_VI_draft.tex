@@ -231,6 +231,13 @@ processors (Heron r2, 156 qubits, 27 and 28 October 2026; job identifiers in the
 6 UEs, s7 & 1 & 18 & 142 / 171 & \texttt{ibm\_fez} & 59.4\% & yes \\
 10 UEs, s1 & 0 & 38 & 606 / 626 & \texttt{ibm\_kingston} & 2.6\% & yes \\
 \hline
+6 UEs, s3 & 0 & 24 & 305 / 386 & \texttt{ibm\_kingston}, control & 25.0\% & yes \\
+6 UEs, s3 & 0 & 24 & 305 / 386 & \texttt{ibm\_kingston}, DD & 21.1\% & yes \\
+6 UEs, s3 & 0 & 24 & 305 / 386 & \texttt{ibm\_kingston}, DD + twirling & 13.8\% & yes \\
+10 UEs, s1 & 0 & 38 & 606 / 626 & \texttt{ibm\_kingston}, control & 2.4\% & yes \\
+10 UEs, s1 & 0 & 38 & 606 / 626 & \texttt{ibm\_kingston}, DD & 0.7\% & yes \\
+10 UEs, s1 & 0 & 38 & 606 / 626 & \texttt{ibm\_kingston}, DD + twirling & 0.2\% & yes \\
+\hline
 \end{tabular}%
 }
 \end{table}
@@ -244,7 +251,14 @@ sample equals the noiseless optimum and every decoded network schedule attains t
 feasible-shot fraction measures the device noise: 60 to 86\% at 8 to 18 qubits (up to 139 two-qubit gates), 35 to
 43\% at 20 to 24 qubits (about 300 gates), and 2.6\% at 38 qubits (606 gates), bracketed by the two noise models at
 18 to 20 qubits. A few hundred additional two-qubit gates would leave fewer than one feasible shot in a thousand,
-which places the present limit of the quantum step at about ten UEs per domain at depth~1 without error mitigation.
+which places the present limit of the quantum step at about ten UEs per domain at depth~1. Error suppression
+does not move this limit: re-sampling the two largest domains in one session with dynamical decoupling
+(XY4)~\cite{Viola1999} and with dynamical decoupling plus Pauli twirling~\cite{Wallman2016} lowered the feasible
+fraction from the in-session control values of 25.0\% and 2.4\% to 21.1\% and 0.7\%, and to 13.8\% and 0.2\%,
+respectively. These circuits have almost no idle time, so decoupling pulses add gate error without cancelling idle
+dephasing, and twirling inserts further single-qubit gates; the best sample equalled the noiseless optimum in every
+run. The same circuit's unmitigated yield also varied by about ten points between calibration sessions (34.8\% versus
+25.0\%), so all device comparisons in this paper are made within one session.
 
 On these domains the greedy assignment is itself optimal, and the role of the QAOA layers is to concentrate a
 constrained sampler: from the $W$ state, one layer raises the probability of drawing an optimal assignment from the

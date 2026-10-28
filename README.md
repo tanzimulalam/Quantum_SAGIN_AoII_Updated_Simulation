@@ -34,6 +34,7 @@ Results and figures of the current run are summarised in `RESULTS.md`.
 | `scripts/hardware_run.py` | IBM Quantum runner: optimize on the simulator, sample once per domain on a device or a fake-backend noise model, decode and certify |
 | `scripts/qaoa_depth_shots_study.py` | Depth / shots / initial-state study of the XY-QAOA on hardware-sized domains (P of sampling the optimal set vs uniform) |
 | `sentinel/tle_geometry.py` | SGP4 propagation of the Starlink TLE snapshot in `data/`; persistent serving slots with natural handovers |
+| `docs/sections_I_to_IV_draft.tex`, `docs/new_references.bib` | LaTeX draft of the abstract and Sections I to IV written around the revised evidence, and the references it adds |
 | `docs/section_V_draft.tex`, `docs/section_VI_draft.tex`, `docs/hardware_howto.md` | LaTeX drafts of the revised Sections V and VI (with Table I of values actually used) and the device-run guide |
 | `docs/compact_formulation.md` | Mathematics of the compact formulation, XY mixers, ADMM fixes and the hardware protocol, in the manuscript's notation |
 | `scripts/make_figures.py` | All figures (`figures/`) and tables (`results/tables.md`) |
@@ -49,6 +50,10 @@ python -m venv .venv
 Python 3.12, numpy, scipy, pandas, matplotlib, qiskit 2.x and qiskit-aer are required (pinned in `requirements.txt`).
 
 ## Running
+
+`bash scripts/reproduce_all.sh` regenerates every table and figure in the order the paper reports them (about
+6 hours on 16 cores, PPO training included; device sampling runs only if an IBM Quantum account is saved). The
+individual steps:
 
 ```bash
 .venv/Scripts/python.exe tests/smoke_core.py                      # end-to-end check on a small instance
@@ -72,7 +77,11 @@ Hardware (IBM Quantum Open Plan). Everything is optimized on the simulator; the 
 .venv/Scripts/python.exe scripts/hardware_run.py --mode estimate --fake FakeTorino --ues 6      # sizes and QPU-time estimate, nothing submitted
 .venv/Scripts/python.exe scripts/hardware_run.py --mode fake --fake FakeTorino --ues 6          # noisy local simulation with the device noise model
 .venv/Scripts/python.exe scripts/hardware_run.py --mode device --ues 6 --domains 0              # real device; needs a saved IBM Quantum account
+.venv/Scripts/python.exe scripts/hardware_run.py --mode device --ues 6 --domains 0 --mitigation dd_twirl   # with dynamical decoupling and Pauli twirling
 ```
+
+Domains above `--max-sim-qubits` (default 26) cannot be optimized on the statevector simulator; the runner transfers the
+angles of the largest simulated domain to them and records `params_source` in the summary.
 
 Device runs on `ibm_kingston` and `ibm_fez` (27 and 28 October 2026; thirteen domains of 8 to 38 qubits, 4096 shots
 each, 29 s of QPU time in total) are in `results/hardware/device_*/` and tabulated in `results/hardware/runs.md`; every

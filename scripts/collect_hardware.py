@@ -26,6 +26,7 @@ def main():
                 continue
             rows.append({
                 "run": d.name, "mode": s["mode"], "backend": s["backend"], "ues": s["ues"], "seed": seed,
+                "mitigation": s.get("mitigation", "none"),
                 "domain": dom["domain"], "qubits": dom["n_qubits"], "two_qubit_gates": dom["two_qubit_gates"],
                 "depth": dom["transpiled_depth"], "shots": s["shots"],
                 "feasible_frac": dom["hw_feasible_sample_fraction"],
@@ -40,11 +41,11 @@ def main():
     df.to_csv(HW / "runs.csv", index=False)
     dev = df[df["mode"] == "device"]
     md = ["# Hardware runs", "", "## Real device", "",
-          "| run | backend | UEs | seed | domain | qubits | 2q gates | depth | shots | feasible shots | best = noiseless opt | schedule gap vs ILP | QPU s | job |",
-          "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
+          "| run | backend | mitigation | UEs | seed | domain | qubits | 2q gates | depth | shots | feasible shots | best = noiseless opt | schedule gap vs ILP | QPU s | job |",
+          "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
     for _, r in dev.iterrows():
         gap = f"{r.gap_pct:+.2f}%" if pd.notna(r.gap_pct) else "n/a"
-        md.append(f"| {r.run} | {r.backend} | {r.ues} | {r.seed} | {r.domain} | {r.qubits} | {r.two_qubit_gates} | {r.depth} | {r.shots} | "
+        md.append(f"| {r.run} | {r.backend} | {r.mitigation} | {r.ues} | {r.seed} | {r.domain} | {r.qubits} | {r.two_qubit_gates} | {r.depth} | {r.shots} | "
                   f"{100*r.feasible_frac:.1f}% | {'yes' if r.best_matches_noiseless else 'no'} | {gap} | {r.qpu_s} | {r.job_id} |")
     if len(dev):
         md += ["", f"Device domains sampled: {len(dev)}; best sample equals the noiseless optimum in "
