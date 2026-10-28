@@ -36,8 +36,8 @@ OUT = ROOT / "results" / "hardware"
 def prepare(args):
     """Optimize everything on the simulator; return the instance, per-domain QUBOs with final weights, angles, and references."""
     cfg = configure(FullConfig(), net__num_ues=args.ues, net__num_bs=2, net__num_sat=2, net__num_domains=2,
-                    solver__solver="qaoa_xy", solver__qaoa_depth=args.depth, solver__qaoa_shots=512,
-                    solver__qaoa_maxiter=args.iters, solver__max_qaoa_qubits=64, solver__admm_max_rounds=4)
+                    solver__solver="sa_xy", solver__qaoa_depth=args.depth, solver__qaoa_shots=512,
+                    solver__qaoa_maxiter=args.iters, solver__admm_max_rounds=4)
     inst = make_instance(cfg, args.seed, 6)
     ref = solve_p3_exact(inst)["eta"]
     pruned = prune_candidates(inst, args.k_cand)
@@ -51,8 +51,33 @@ def prepare(args):
     for k in range(int(pruned.domain_of_ue.max()) + 1):
         dq = build_compact_qubo(pruned, k, w, z, u, 0.0, shared, onehot_penalty=False)   # uncoupled domain problem for the device
         g = greedy_sel(dq, pruned)
-        sim = qaoa_xy(dq, pruned, depth=args.depth, shots=512, maxiter=args.iters, seed=args.seed, warm_start_sel=g, init=args.init)
-        domains.append({"k": k, "dq": dq, "params": sim["params"], "param_names": sim["param_names"], "sim": sim, "greedy_sel": g})
+        if dq.n <= args.max_sim_qubits:
+            sim = qaoa_xy(dq, pruned, depth=args.depth, shots=512, maxiter=args.iters, seed=args.seed, warm_start_sel=g, init=args.init)
+            src = "simulator"
+        else:
+            # too large for the statevector simulator: angles are transferred (parameter concentration) from the
+            # largest simulated domain of this run, or from --transfer-from, and the greedy assignment is the reference
+            sim = {"params": None, "param_names": None, "feasible_sample_fraction": float("nan"),
+                   "best_energy": dq.assignment_energy(g, pruned), "best_sel": g}
+            src = "transferred"
+        domains.append({"k": k, "dq": dq, "params": sim["params"], "param_names": sim["param_names"], "sim": sim,
+                        "greedy_sel": g, "params_source": src})
+    donors = [d for d in domains if d["params"] is not None]
+    if args.transfer_from:
+        tr = json.loads((OUT / args.transfer_from / "summary.json").read_text())
+        cand = [dd for dd in tr["domains"] if dd.get("params")]
+        if cand:
+            big = max(cand, key=lambda dd: dd["n_qubits"])
+            donors.append({"params": np.array(big["params"]), "param_names": big.get("param_names"), "dq": None,
+                           "k": f"{args.transfer_from}/domain{big['domain']}"})
+    for d in domains:
+        if d["params"] is None:
+            if not donors:
+                raise SystemExit(f"domain {d['k']} has {d['dq'].n} qubits (> {args.max_sim_qubits}) and no angle donor; pass --transfer-from <tag>")
+            donor = max(donors, key=lambda dd: dd["dq"].n if dd["dq"] is not None else 0)
+            d["params"] = np.array(donor["params"]); d["param_names"] = donor["param_names"]
+            d["params_source"] = f"transferred from domain {donor['k']}"
+            print(f"  domain {d['k']}: {d['dq'].n} qubits > {args.max_sim_qubits}, angles transferred from domain {donor['k']}", flush=True)
     return cfg, inst, pruned, ref, res, domains
 
 
@@ -86,6 +111,8 @@ def main():
     ap.add_argument("--tag", default=None)
     ap.add_argument("--init", choices=["w", "greedy"], default="greedy", help="initial state: W state per UE or the greedy basis state")
     ap.add_argument("--domains", default="all", help="comma-separated domain indices to sample on the device (default all)")
+    ap.add_argument("--max-sim-qubits", type=int, default=26, help="largest domain optimized on the statevector simulator; larger domains get transferred angles")
+    ap.add_argument("--transfer-from", default=None, help="results/hardware/<tag> whose largest simulated domain donates angles to oversized domains")
     args = ap.parse_args()
     tag = args.tag or f"{args.mode}_U{args.ues}_k{args.k_cand}_p{args.depth}_s{args.seed}_{args.init}"
     out = OUT / tag; out.mkdir(parents=True, exist_ok=True)
@@ -107,7 +134,7 @@ def main():
         print("fake backend:", backend.name, flush=True)
 
     summary = {"mode": args.mode, "backend": backend.name, "ues": args.ues, "k_cand": args.k_cand, "depth": args.depth,
-               "shots": args.shots, "ilp_eta": ref, "sim_compact_qaoa_eta": res.eta, "domains": []}
+               "shots": args.shots, "ilp_eta": ref, "sim_compact_qaoa_eta": res.eta, "max_sim_qubits": args.max_sim_qubits, "domains": []}
     circuits = []
     if args.domains != "all":
         keep = {int(v) for v in args.domains.split(",")}
@@ -120,7 +147,8 @@ def main():
         est_s = args.shots * 2e-3
         d_sum = {"domain": d["k"], "n_qubits": dq.n, "decision_qubits": dq.n_x, "two_qubit_gates": two_q, "transpiled_depth": depth_t,
                  "sim_feasible_sample_fraction": d["sim"]["feasible_sample_fraction"], "sim_best_energy": d["sim"]["best_energy"],
-                 "greedy_energy": dq.assignment_energy(d["greedy_sel"], pruned), "estimated_qpu_s_upper": est_s}
+                 "greedy_energy": dq.assignment_energy(d["greedy_sel"], pruned), "estimated_qpu_s_upper": est_s,
+                 "params": [float(v) for v in d["params"]], "param_names": d.get("param_names"), "params_source": d.get("params_source", "simulator")}
         print(f"  domain {d['k']}: {dq.n} qubits ({dq.n_x} decision), {two_q} two-qubit gates, depth {depth_t}; "
               f"simulator feasible-sample fraction {d['sim']['feasible_sample_fraction']:.2f}; est. QPU time <= {est_s:.1f} s", flush=True)
         summary["domains"].append(d_sum)
