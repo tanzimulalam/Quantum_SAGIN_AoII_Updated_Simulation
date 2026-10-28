@@ -33,8 +33,9 @@ def run_seed(task: Dict) -> List[Dict]:
     cfg_off = configure(cfg, dis__enabled=False)
     ep_off = make_episode(cfg_off, seed)
     plans = {}
+    L = int(task.get("num_scenarios", 6))          # scenario-set size of the robust problem (sensitivity sweep)
     if any(p in task["policies"] for p in ("sentinel", "sentinel_triggered", "sentinel_capped_trigger")):
-        plans["sentinel"] = plan_schedule(ep_on, num_scenarios=6, solver_seed=seed)
+        plans["sentinel"] = plan_schedule(ep_on, num_scenarios=L, solver_seed=seed)
         plans["sentinel_triggered"] = plans["sentinel"]
         plans["sentinel_capped_trigger"] = plans["sentinel"]
     if "nominal" in task["policies"]:
@@ -47,10 +48,11 @@ def run_seed(task: Dict) -> List[Dict]:
                 from .rl import run_ppo_policy, model_path
                 r = run_ppo_policy(ep, model_path(cfg.net.num_ues, cfg.net.sat_model, cfg.dis.ntn_model))
             else:
-                r = run_policy(ep, pol, plan=plans.get(pol))
+                robust = pol in ("sentinel", "sentinel_triggered", "sentinel_capped_trigger")
+                r = run_policy(ep, pol, plan=plans.get(pol), num_scenarios=L if robust else None)
             row = r.to_row()
             row.update({"sweep": task["sweep"], "x_label": task["x_label"], "x_value": task["x_value"],
-                        "disruption_mode": dis_flag, "num_scenarios": 6 if pol in ("sentinel", "sentinel_triggered", "sentinel_capped_trigger") else (1 if pol == "nominal" else 0),
+                        "disruption_mode": dis_flag, "num_scenarios": L if pol in ("sentinel", "sentinel_triggered", "sentinel_capped_trigger") else (1 if pol == "nominal" else 0),
                         "disruption_events": ep.disruption.events, "natural_handovers": ep.disruption.natural_handovers,
                         "nlos_pass_fraction": ep.disruption.nlos_fraction, "sat_model": cfg.net.sat_model, "ntn_model": cfg.dis.ntn_model})
             rows.append(row)

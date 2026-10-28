@@ -1,0 +1,48 @@
+{
+  "mode": "fake",
+  "backend": "fake_torino",
+  "ues": 6,
+  "k_cand": 4,
+  "depth": 1,
+  "shots": 2048,
+  "ilp_eta": 2.5062393836918995,
+  "sim_compact_qaoa_eta": 2.5062393836918995,
+  "domains": [
+    {
+      "domain": 0,
+      "n_qubits": 18,
+      "decision_qubits": 14,
+      "two_qubit_gates": 137,
+      "transpiled_depth": 169,
+      "sim_feasible_sample_fraction": 1.0,
+      "sim_best_energy": 1.9799091877291946,
+      "greedy_energy": 1.9799091877291946,
+      "estimated_qpu_s_upper": 4.096,
+      "hw_onehot_sample_fraction": 0.521484375,
+      "hw_feasible_sample_fraction": 0.521484375,
+      "hw_best_energy": 1.9799091877291946,
+      "hw_mean_qubo_energy": 2.799131195636683,
+      "hw_matches_sim_best": true
+    },
+    {
+      "domain": 1,
+      "n_qubits": 20,
+      "decision_qubits": 16,
+      "two_qubit_gates": 279,
+      "transpiled_depth": 355,
+      "sim_feasible_sample_fraction": 1.0,
+      "sim_best_energy": 0.48489852325152294,
+      "greedy_energy": 0.48489852325152294,
+      "estimated_qpu_s_upper": 4.096,
+      "hw_onehot_sample_fraction": 0.33056640625,
+      "hw_feasible_sample_fraction": 0.33056640625,
+      "hw_best_energy": 0.48489852325152294,
+      "hw_mean_qubo_energy": 2.1174978578903123,
+      "hw_matches_sim_best": true
+    }
+  ],
+  "sampling_wall_s": 1323.1132805347443,
+  "hw_schedule_eta": 2.5062393836918995,
+  "hw_schedule_feasible": true,
+  "hw_gap_pct_vs_ilp": 0.0
+}

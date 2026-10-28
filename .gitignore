@@ -13,3 +13,4 @@ models/
 # IBM Cloud API key downloads: never commit
 apikey*.json
 *apikey*
+cache/

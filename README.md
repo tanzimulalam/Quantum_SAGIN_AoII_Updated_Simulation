@@ -57,6 +57,10 @@ Python 3.12, numpy, scipy, pandas, matplotlib, qiskit 2.x and qiskit-aer are req
 .venv/Scripts/python.exe scripts/run_sweeps.py --seeds 30 --workers 16 --formulation epigraph
 .venv/Scripts/python.exe scripts/run_validation.py --exp all --seeds 10 --seeds-small 5
 .venv/Scripts/python.exe scripts/run_validation_compact.py --exp all --seeds 10 --seeds-small 5
+.venv/Scripts/python.exe scripts/run_sweeps.py --seeds 30 --which scen --sat-model tle --ntn --append --out-prefix sweeps_tle_ntn   # scenario-set size L = 1..6
+.venv/Scripts/python.exe scripts/run_sweeps.py --seeds 30 --which cap --sat-model tle --ntn --append --out-prefix sweeps_tle_ntn    # bandwidth per node 2..20 MHz
+.venv/Scripts/python.exe scripts/paired_stats.py --prefix sweeps_tle_ntn            # Wilcoxon / paired-t / Hodges-Lehmann tables across seeds
+.venv/Scripts/python.exe scripts/collect_hardware.py                                # all device and noise-model runs -> results/hardware/runs.md
 .venv/Scripts/python.exe scripts/make_figures.py                                   # epigraph sweeps -> figures/
 .venv/Scripts/python.exe scripts/make_figures.py --prefix sweeps_compact --fig-prefix compact   # -> figures/compact/
 .venv/Scripts/python.exe tests/test_xy_mixer.py
@@ -88,6 +92,7 @@ instances dominate). Outputs go to `results/` (CSV) and `figures/` (PDF and PNG)
 - `sentinel`: robust SENTINEL (L = 6). Periodic sampling at the chosen rate, dedicated bandwidth level, chosen node, re-solved on every satellite visibility change and at least every 30 s.
 - `sentinel_triggered`: the hybrid proposed in the paper's conclusion: SENTINEL's robust association and bandwidth, with transmissions triggered by the observed mismatch.
 - `sentinel_capped_trigger`: same, with the chosen update period acting as a rate cap.
+- `whittle`: Whittle-index scheduler (`sentinel/whittle.py`): the restless-bandit index of each UE's (source state, estimate, age) is computed numerically per source; every slot the mismatched UEs are ranked by index and admitted at their best node while the node's shared bandwidth still delivers every admitted packet. Same observations and rate cap as `threshold`; identical to it whenever capacity does not bind, and the reference policy when it does (`--which cap`).
 - `ppo`: a trained actor-critic agent (`sentinel/rl.py`) deciding node and update-period level per UE once per orchestration interval with an AoII reward; train with `scripts/train_rl.py --ues 5,10,15,20 --episodes 5000 --sat-model tle --ntn`, then evaluate with `run_sweeps.py --policies ppo --append`.
 
 ## Physical-layer options

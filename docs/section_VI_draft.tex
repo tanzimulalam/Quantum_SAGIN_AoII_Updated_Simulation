@@ -58,7 +58,11 @@ Quantum backend & Qiskit Aer (noiseless); FakeTorino / FakeFez noise models; \te
 
 \textbf{Baselines.} \emph{Random} transmits with probability 0.1 per slot over a uniformly chosen visible node with
 equal bandwidth sharing. \emph{AoII threshold} is a state-aware policy that transmits whenever its AoII is positive, at
-most once per 5 slots, on the node with the best nominal rate. \emph{PPO} is an actor-critic agent that selects, once per orchestration interval, a serving node and an update-period
+most once per 5 slots, on the node with the best nominal rate. \emph{Whittle index} is the restless-bandit
+scheduler of the AoII literature: the index of each UE's (source state, estimate, age) arm is computed numerically per
+source, and every slot the mismatched UEs are ranked by index and admitted at their best node while the node's shared
+bandwidth still delivers every admitted packet; it shares the threshold policy's observations and rate cap.
+\emph{PPO} is an actor-critic agent that selects, once per orchestration interval, a serving node and an update-period
 level for every UE (invisible or failed nodes masked, equal bandwidth sharing), rewarded with the negative mean AoII of
 the interval; it is trained for 5000 episodes per network size on 30 seeds disjoint from the evaluation seeds and
 evaluated deterministically. \emph{Nominal SENTINEL} runs the same solver with
@@ -95,11 +99,15 @@ is 16\% lower ($0.39$ versus $0.46$): robustness buys a guaranteed worst case at
 state-aware threshold policy, given the same ACK feedback as SENTINEL, is the strongest on average AoII ($0.13$ to
 $0.15$); SENTINEL with state-aware triggering is within 10 to 20\% of it while retaining the certificate and routing
 21 to 27\% of deliveries to BSs. Peak AoII is 100 to 250 for every policy, set by the 20-slot handover interruptions
-and the NLOS passes rather than by scheduling. The value of robustness depends on whether the network can react to
-link failures: with ACK feedback disabled for every policy, median AoII rises by an order of magnitude and the ranking
-inverts, robust SENTINEL becoming the best policy ($1.35$ to $1.75$) and the state-aware threshold the worst non-random
-one ($1.87$ to $2.49$), because the robust schedule keeps a quarter of the UEs on BSs that satellite shadowing cannot
-reach. The robust hedge is thus worth 20 to 45\% in median AoII without failure feedback and close to nothing with it.
+and the NLOS passes rather than by scheduling. Whether the network can react to link failures matters more than
+any scheduling choice: with ACK feedback disabled for every policy (60 seeds), median AoII rises by an order of
+magnitude for all of them, the certificate holds in 87 to 92\% of epochs, and the state-aware threshold policy loses
+its advantage, tying the SENTINEL schedules at 5 and 10 UEs and falling 25 to 30\% behind SENTINEL + trigger at 15
+and 20 UEs (Hodges-Lehmann $-0.77$ and $-0.71$, Holm-corrected $p=0.023$ and $0.029$), because it concentrates 98\%
+of its traffic on the best nominal satellite while the SENTINEL schedules keep 18 to 27\% of deliveries on BSs.
+Robust and nominal SENTINEL remain statistically indistinguishable in realized AoII without feedback as well
+($p\ge0.41$); the measurable product of the robust scenario set is its lower certificate, in 77 to 100\% of seeds
+in both regimes.
 \begin{table}[!t]
 \centering
 \caption{Median Average AoII with Starlink Passes and the TR~38.811 Channel (30 seeds, disruption on)}
@@ -119,6 +127,34 @@ reach. The robust hedge is thus worth 20 to 45\% in median AoII without failure 
 The trained PPO agent matches the nominal schedule at 5 UEs and degrades with the size of its action space; it
 routes all traffic to satellites and, like SENTINEL, samples without observing the source, so it remains above the
 state-aware policies at every size.
+
+\textbf{Statistical significance.} All policies run on the same 30 episodes, so comparisons are paired; we report
+two-sided Wilcoxon signed-rank tests, Holm-corrected within each sweep. Robust and nominal SENTINEL are
+indistinguishable in realized AoII at every size ($p\ge0.08$), whereas the robust certificate is lower in 67 to
+100\% of seeds ($p\le 9\times10^{-5}$). The hybrid's gap to the threshold policy, 0.02 to 0.03 in AoII, is
+significant at every size ($p\le0.013$), and PPO is significantly behind SENTINEL from 10 UEs on.
+
+\textbf{Whittle index and capacity.} At the bandwidths of Table~\ref{tab:simulation_parameters} a node delivers 19 to 40
+simultaneous sharers per slot, so the Whittle scheduler coincides with the threshold policy ($p\ge0.18$ at every
+size and topology): the threshold baseline is the Whittle-index policy of this regime. Fig.~\ref{fig:capacity}
+sweeps the bandwidth per node down at 20 UEs: at 5~MHz the threshold policy is 57\% worse (0.239 versus 0.152,
+$p=4\times10^{-9}$) and at 2~MHz its simultaneous transmissions collapse every shared link (median AoII 33.5,
+delivery ratio 0.16), while the capacity-aware index scheduler stays at 0.16. SENTINEL's dedicated bandwidth levels
+sidestep this regime by construction.
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=0.9\columnwidth]{figures/tle_ntn/capacity_average_aoii.pdf}
+\caption{Median average AoII (IQR over 30 seeds) of the per-slot state-aware policies at 20 UEs as the bandwidth per
+node is reduced. The Whittle-index scheduler and the AoII-threshold policy coincide while capacity does not bind
+(10 and 20~MHz) and separate below 5~MHz, where uncoordinated threshold transmissions collapse the shared links.}
+\label{fig:capacity}
+\end{figure}
+\textbf{Scenario-set size.} Truncating the scenario list (nominal, mild, severe, handover of each satellite, joint)
+to $L=1,\dots,6$ at 10 UEs leaves realized AoII flat (0.265 to 0.278) and moves the certificate and the BS hedge
+only once the handover of the second shared satellite is included ($L\ge5$: certified $\bar\eta$ from 4.57 to
+4.28, satellite share from 0.79 to 0.74). Nominal plus the joint outage would reproduce the $L=6$ schedule at a
+third of the dual iterations.
 Fig.~\ref{fig:topology} compares ground-only, satellite-only, and integrated deployments at 10 UEs: two BSs cover
 only the UEs within 5 to 7~km of a $20\times20$~km$^2$ area, so ground-only monitoring fails (median AoII 60 to 78),
 two satellite planes alone bring every policy below $0.4$, and the integrated $2+2$ and $3+3$ topologies are best,

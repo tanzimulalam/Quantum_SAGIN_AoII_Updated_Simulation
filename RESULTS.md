@@ -300,23 +300,105 @@ Topology at 10 UEs (median): ground-only 63 to 73 for every policy; satellite-on
 - Cost: 20 to 58 qubits per domain, 34 re-solve epochs plus 8 to 28 reactive re-solves per run, 34 to 223 s of
   solver time per 10-minute run.
 
-### Ablation: no ACK-based link-failure handling (same model, UE sweep, 30 seeds)
+### Paired statistical tests across seeds (`scripts/paired_stats.py`, `results/sweeps_tle_ntn_paired_stats.md`)
 
-`results/sweeps_tle_ntn_noack_*`, `figures/tle_ntn_noack/`. Median average AoII, disruption on:
+All policies run on the same 30 episodes (common random numbers), so every comparison is paired. For each sweep point
+the table reports the median paired ratio, the fraction of seeds in which A is lower, the Hodges-Lehmann median
+difference with a bootstrap 95% CI, the two-sided Wilcoxon signed-rank p (Holm-corrected within the sweep) and the
+paired t p. With ACK feedback, disruption on:
+
+| Comparison (A vs B) | 5 UEs | 10 UEs | 15 UEs | 20 UEs |
+|---|---|---|---|---|
+| Robust vs nominal SENTINEL, realized AoII | ratio 0.99, p = 0.35 | 1.01, p = 0.82 | 1.00, p = 0.22 | 0.99, p = 0.08 |
+| Robust vs nominal, certified eta | 0.93, lower in 67%, p = 9e-5 | 0.95, 90%, p = 6e-6 | 0.97, 100%, p = 2e-9 | 0.98, 100%, p = 2e-9 |
+| SENTINEL + capped trigger vs threshold | +0.027 [+0.009, +0.050], p = 0.013 | +0.024 [+0.012, +0.040], p = 7e-4 | +0.020 [+0.010, +0.038], p = 6e-4 | +0.027 [+0.013, +0.054], p = 1e-3 |
+| Robust SENTINEL vs PPO | -0.028 [-0.068, +0.001], p = 0.50 | -0.118 [-0.157, -0.087], p = 5e-7 | -0.148 [-0.173, -0.126], p = 5e-8 | -0.151 [-0.206, -0.102], p = 6e-5 |
+| Robust SENTINEL vs threshold | +0.130, p = 5e-8 | +0.127, p = 5e-8 | +0.124, p = 5e-8 | +0.127, p = 6e-5 |
+
+(p values Holm-corrected.) So: the robust and nominal schedules are statistically indistinguishable in realized AoII
+at every size, while the robust certificate is lower in 67 to 100% of seeds; the hybrid's gap to the threshold policy
+(0.02 to 0.03 AoII) is small but significant; PPO is significantly worse than SENTINEL from 10 UEs on and tied at 5.
+
+### Whittle-index baseline and the capacity-limited regime (`sentinel/whittle.py`, `--which cap`)
+
+The Whittle index of each UE's restless arm (state = source state, estimate, age of the mismatch; cost = AoII;
+action = transmit) is computed numerically per source by relative value iteration on a grid of transmission prices.
+The scheduler ranks mismatched UEs by index every slot and admits them at their best node while the node's equally
+shared bandwidth still delivers every admitted packet within the slot; observations, rate cap and ACK handling are
+those of the threshold policy.
+
+- At the default bandwidths (20 MHz BS, 50 MHz satellite) one node delivers 19 to 40 simultaneous sharers, so
+  capacity never binds and the Whittle scheduler coincides with the threshold policy: identical medians (0.134 /
+  0.141 / 0.142 / 0.146 at 5 / 10 / 15 / 20 UEs), Wilcoxon p >= 0.18 at every size and in every integrated or
+  satellite-only topology, 1 to 2% fewer attempts (it does not try nodes that cannot deliver even alone). The
+  threshold baseline of this study is therefore the Whittle-index policy of the AoII literature in this regime.
+- Reducing the bandwidth per node at 20 UEs (`results/sweeps_tle_ntn_summary.csv`, sweep `capacity_limited`,
+  `figures/tle_ntn/capacity_*`) separates them:
+
+| Bandwidth per node | Random | AoII threshold | Whittle index |
+|---|---|---|---|
+| 20 MHz | 6.05 | 0.152 | 0.145 |
+| 10 MHz | 6.10 | 0.152 | 0.148 |
+| 5 MHz | 6.11 | 0.239 (delivery 0.87) | 0.152 (0.94) |
+| 2 MHz | 6.31 | 33.5 (delivery 0.16) | 0.161 (0.95) |
+
+  At 5 MHz the threshold policy is 57% worse (Whittle lower in 97% of seeds, p = 4e-9); at 2 MHz its simultaneous
+  transmissions collapse every shared link (peak AoII 3654) while the capacity-aware index scheduler is unaffected.
+- Ground-only topology is the one place the index policy loses (81 vs 63): its admission rule never tries a node
+  that cannot deliver at the nominal rate, whereas the threshold policy's blind attempts occasionally succeed on a
+  fading upswing. In the 1+1 topology they tie (0.87 vs 0.90, p = 0.14).
+
+### Scenario-set size (`--which scen`, 10 UEs, 2 BS + 2 SAT, robust SENTINEL, 30 seeds)
+
+The scenario list is nominal, +mild shadowing (6 dB), +severe shadowing (12 dB), +handover of satellite 1,
++handover of satellite 2, +joint outage; L truncates it in that order. `figures/tle_ntn/scenario_set_*`.
+
+| L | 1 | 2 | 3 | 4 | 5 | 6 |
+|---|---|---|---|---|---|---|
+| Median AoII, ACK on | 0.270 | 0.270 | 0.265 | 0.278 | 0.266 | 0.269 |
+| Certified eta (mean) | 4.48 | 4.48 | 4.51 | 4.57 | 4.28 | 4.28 |
+| Satellite delivery share | 0.77 | 0.77 | 0.78 | 0.79 | 0.74 | 0.74 |
+| Certificate holds | 0.990 | 0.990 | 0.991 | 0.989 | 0.989 | 0.989 |
+| Solver time per run (s) | 54 | 56 | 64 | 70 | 65 | 56 |
+| Median AoII, no ACK | 1.16 | 1.16 | 1.88 | 2.29 | 1.47 | 1.50 |
+
+The mild scenario never changes the schedule (L = 2 equals L = 1 on every seed) and the two shadowing scenarios
+alone do not lower the certificate (the 1 to 2% rise at L = 3 and 4 is annealer noise); the hedge appears only once
+the handover of the second shared satellite is in the set (L >= 5): the certificate drops 6% and a further 5% of
+deliveries move to BSs. Realized AoII with feedback is flat in L. Without feedback it is non-monotone and noisy
+(L = 6 lower than L = 1 in 47% of seeds, median ratio 1.006), i.e. the value of the scenario set lies in the
+certificate, not in realized AoII at this size. Two scenarios (nominal and the joint/handover outage) would give the
+same schedule as six at a third of the dual iterations.
+
+### Ablation: no ACK-based link-failure handling (same model, UE sweep, 60 seeds)
+
+`results/sweeps_tle_ntn_noack_*`, `figures/tle_ntn_noack/`, `results/sweeps_tle_ntn_noack_paired_stats.md`. The
+first 30 seeds suggested a large robust-versus-nominal advantage; the paired tests did not support it, so the sweep
+was extended to 60 seeds. Median (mean) average AoII, disruption on:
 
 | UEs | Random | AoII threshold | Nominal | Robust SENTINEL | SENTINEL + trigger |
 |---|---|---|---|---|---|
-| 5 | 6.81 | 1.87 | 1.54 | 1.35 | 1.32 |
-| 10 | 6.70 | 2.14 | 1.16 | 1.50 | 1.48 |
-| 15 | 6.78 | 2.39 | 2.41 | 1.56 | 1.41 |
-| 20 | 6.75 | 2.49 | 1.90 | 1.75 | 1.55 |
+| 5 | 6.65 (6.71) | 0.97 (2.49) | 1.18 (2.78) | 1.01 (2.70) | 0.90 (2.70) |
+| 10 | 6.70 (6.74) | 1.72 (2.52) | 1.12 (2.33) | 1.69 (2.34) | 1.57 (2.22) |
+| 15 | 6.77 (6.79) | 2.47 (3.18) | 2.17 (2.63) | 1.58 (2.26) | 1.43 (2.11) |
+| 20 | 6.73 (6.75) | 2.53 (2.83) | 1.90 (2.48) | 1.73 (2.41) | 1.61 (2.25) |
 
-Without feedback every policy is an order of magnitude worse (a dead NLOS pass is simply ridden out), the certificate
-holds in 88% of epochs instead of 98.7%, and the ranking flips: the robust SENTINEL schedules are the best (median 1.35
-to 1.75) and the state-aware threshold the worst non-random policy (1.87 to 2.49), because the robust schedule keeps a
-quarter of the UEs on BSs that no satellite shadowing can touch while the threshold policy puts 98% of traffic on the
-best nominal satellite. The robust hedge is therefore worth 20 to 45% in median AoII when the system has no link-failure
-feedback, and close to nothing once every policy can react to failures. Both regimes should be reported.
+Paired tests (Wilcoxon, Holm-corrected within the sweep, 60 seeds):
+
+- Without feedback every policy is an order of magnitude worse (a dead NLOS pass is simply ridden out) and the
+  distributions are heavy-tailed (means 2 to 3 times the medians), which is why 30 seeds misled.
+- Robust versus nominal SENTINEL: no significant difference at any size (robust lower in 45 to 65% of seeds,
+  p >= 0.1 raw, >= 0.41 corrected). The robust certificate stays lower (77 to 100% of seeds, p <= 4e-9) and holds in
+  87 to 92% of epochs versus 86 to 91% for the nominal one.
+- The state-aware threshold policy loses its advantage: it ties the SENTINEL schedules at 5 and 10 UEs and is
+  significantly worse than SENTINEL + trigger at 15 and 20 UEs (Hodges-Lehmann -0.77 [-1.29, -0.26] and -0.71
+  [-1.13, -0.25], corrected p = 0.023 and 0.029, hybrid lower in 70 to 72% of seeds); robust SENTINEL alone is lower
+  in 60 to 62% of seeds there (raw p 0.01 to 0.02, corrected 0.11 to 0.19). The threshold policy puts 98% of
+  traffic on the best nominal satellite, the SENTINEL schedules 73 to 82%.
+- So the value of failure feedback is a factor of ten for every policy, and the value of the scheduled BS share is a
+  significant 25 to 30% at 15 to 20 UEs for the hybrid without feedback; the specific value of the robust scenario set
+  over the nominal schedule remains the lower certificate, not a measurable gain in realized AoII. The earlier
+  30-seed statement that the robust hedge was "worth 20 to 45%" is withdrawn.
 
 ## Summary of what the results support
 
@@ -328,7 +410,16 @@ feedback, and close to nothing once every policy can react to failures. Both reg
   with a lower mean at high load; the robust schedule hedges by routing a quarter of deliveries to BSs.
 - The satellite tier is essential in a 20 km area; ground-only monitoring fails, integrated 2+2 or 3+3 is best.
 - A state-aware threshold policy with ACK feedback has the lowest average AoII in every setting; SENTINEL with
-  state-aware triggering is within 10 to 20% of it while keeping the certificate.
+  state-aware triggering is within 10 to 20% of it while keeping the certificate (paired difference 0.02 to 0.03,
+  Wilcoxon p <= 0.013 at every size). At the default bandwidths the threshold policy coincides with the Whittle-index
+  scheduler; when bandwidth per node is cut to 5 MHz or less at 20 UEs, only the capacity-aware index scheduler
+  survives (0.15 to 0.16 versus 0.24 and 33.5).
+- Robust versus nominal SENTINEL is a statistical tie in realized AoII with and without ACK feedback (p >= 0.08,
+  30 and 60 paired seeds) while the robust certificate is lower in 67 to 100% of seeds (p <= 9e-5). The scenario set
+  earns its certificate only once the handover of the second shared satellite is included (L >= 5).
+- Without failure feedback every policy is ten times worse; the SENTINEL hybrid is then significantly better than the
+  threshold policy at 15 to 20 UEs (25 to 30%, corrected p <= 0.03, 60 seeds) because it keeps 20 to 27% of
+  deliveries on BSs.
 - The compact (dualized, slack-free) formulation is exact through 25 UEs with 4 to 5 times fewer qubits than the
   epigraph encoding, within 12% at 50 UEs, and limited by shared-satellite coordination at 75 to 100 UEs; the epigraph
   encoding is unusable beyond a few UEs.

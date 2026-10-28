@@ -1,0 +1,49 @@
+=== scen sweeps finished 2026-10-28T00:40:49Z
+120 tasks on 14 workers
+  10/120 tasks done, 81s elapsed
+  20/120 tasks done, 97s elapsed
+  30/120 tasks done, 108s elapsed
+  40/120 tasks done, 128s elapsed
+  50/120 tasks done, 140s elapsed
+  60/120 tasks done, 154s elapsed
+  70/120 tasks done, 167s elapsed
+  80/120 tasks done, 182s elapsed
+  90/120 tasks done, 196s elapsed
+  100/120 tasks done, 208s elapsed
+  110/120 tasks done, 225s elapsed
+  120/120 tasks done, 233s elapsed
+done in 235s; 3120 rows
+=== cap done 2026-10-28T00:44:45Z
+120 tasks on 14 workers
+  10/120 tasks done, 12s elapsed
+  20/120 tasks done, 21s elapsed
+  30/120 tasks done, 30s elapsed
+  40/120 tasks done, 35s elapsed
+  50/120 tasks done, 46s elapsed
+  60/120 tasks done, 57s elapsed
+  70/120 tasks done, 62s elapsed
+  80/120 tasks done, 75s elapsed
+  90/120 tasks done, 86s elapsed
+  100/120 tasks done, 97s elapsed
+  110/120 tasks done, 107s elapsed
+  120/120 tasks done, 116s elapsed
+done in 118s; 3360 rows
+=== whittle ue done 2026-10-28T00:46:43Z
+150 tasks on 14 workers
+  10/150 tasks done, 4s elapsed
+  20/150 tasks done, 7s elapsed
+  30/150 tasks done, 10s elapsed
+  40/150 tasks done, 17s elapsed
+  50/150 tasks done, 25s elapsed
+  60/150 tasks done, 32s elapsed
+  70/150 tasks done, 34s elapsed
+  80/150 tasks done, 43s elapsed
+  90/150 tasks done, 50s elapsed
+  100/150 tasks done, 53s elapsed
+  110/150 tasks done, 60s elapsed
+  120/150 tasks done, 67s elapsed
+  130/150 tasks done, 74s elapsed
+  140/150 tasks done, 78s elapsed
+  150/150 tasks done, 84s elapsed
+done in 85s; 3510 rows
+=== whittle topo done 2026-10-28T00:48:09Z

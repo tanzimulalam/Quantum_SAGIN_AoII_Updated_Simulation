@@ -21,6 +21,7 @@ from .geometry import Topology, build_topology
 from .channel import bs_rate_bps, sat_rate_bps, nominal_rate_table
 from .sources import SourceSet
 from .scenarios import build_scenarios, DisruptionProcess
+from .whittle import ue_index_tables, A_MAX
 from .problem import build_instance, RobustInstance
 from .admm import sentinel_solve
 from .compact import compact_sentinel_solve
@@ -176,7 +177,8 @@ class RunResult:
         return asdict(self)
 
 
-def run_policy(ep: Episode, policy: str, plan: Optional[List[ScheduleEpoch]] = None) -> RunResult:
+def run_policy(ep: Episode, policy: str, plan: Optional[List[ScheduleEpoch]] = None,
+               num_scenarios: Optional[int] = None) -> RunResult:
     t_wall = time.time()
     cfg = ep.cfg
     U, B, S = ep.topology.num_ues, ep.topology.num_bs, ep.topology.num_sat
@@ -241,7 +243,26 @@ def run_policy(ep: Episode, policy: str, plan: Optional[List[ScheduleEpoch]] = N
             k2 += 1
         return min(k2 + 1, k_switch) * I
     scen_full = build_scenarios(cfg.dis, cfg.net.num_sat, 6)
-    scen_plan = build_scenarios(cfg.dis, cfg.net.num_sat, 1 if policy == "nominal" else 6)
+    if num_scenarios is None:
+        num_scenarios = 1 if policy == "nominal" else 6
+    scen_plan = build_scenarios(cfg.dis, cfg.net.num_sat, num_scenarios)      # scenario set of the reactive re-solve
+    if policy == "whittle":
+        # Whittle index tables per UE and, per interval, the largest number of equal bandwidth sharers each
+        # (UE, node) pair tolerates while the packet still fits in one slot at the nominal rate
+        w_tab = ue_index_tables(ep.sources)
+        need_bps = D / T_s
+        nmax_int = np.zeros((ep.num_intervals, U, M), dtype=int)
+        full_bw_vec = np.where(np.arange(M) < B, levels_full_bs, levels_full_sat)
+        for kk in range(ep.num_intervals):
+            for nn in range(1, U + 1):
+                r = np.zeros((U, M))
+                if B:
+                    r[:, :B] = bs_rate_bps(d_bs, full_bw_vec[:B][None, :] / nn, rc)
+                if S:
+                    rg = ep.topology.sat_range_m[:, kk, :].T                      # (U, S)
+                    rs = sat_rate_bps(rg, full_bw_vec[B:][None, :] / nn, rc)
+                    r[:, B:] = np.where(ep.topology.sat_visible[:, kk, :].T, rs, 0.0)
+                nmax_int[kk][(r >= need_bps) & vis_int[kk]] = nn
     for t in range(1, T):
         k = t // I
         # --- decide transmitters -------------------------------------------------------------
@@ -280,6 +301,34 @@ def run_policy(ep: Episode, policy: str, plan: Optional[List[ScheduleEpoch]] = N
                 tx_node = np.where(allowed.any(axis=1), np.argmax(score, axis=1), best_node[k])
             else:
                 tx_node = best_node[k]
+            tx_bw = None
+        elif policy == "whittle":
+            # same observation and transmission rules as the threshold policy (mismatch, minimum gap, best nominal
+            # node with ACK blocking); the Whittle index orders simultaneous transmitters and the node admits the
+            # highest-index UEs while its shared bandwidth still delivers every admitted packet
+            age = np.minimum((t - 1) - last_correct, A_MAX)
+            xp = X[t - 1]
+            W = w_tab[np.arange(U), xp, est, age]
+            elig = (xp != est) & ((t - last_delivery) >= cfg.sim.min_update_gap_slots)
+            allowed = vis_int[k] & ~(blocked_until > t)
+            score = np.where(allowed, best_rate_int[k], -1.0)
+            tx_node = np.where(allowed.any(axis=1), np.argmax(score, axis=1), best_node[k])
+            tx = np.zeros(U, dtype=bool)
+            for m_node in np.unique(tx_node[elig]):
+                cand = np.flatnonzero(elig & (tx_node == m_node))
+                order = cand[np.argsort(-W[cand], kind="stable")]
+                cap_min = U + 1
+                c = 0
+                for i_u in order:
+                    n_i = nmax_int[k, i_u, m_node]
+                    if n_i == 0:
+                        continue
+                    if min(cap_min, n_i) >= c + 1:
+                        tx[i_u] = True
+                        c += 1
+                        cap_min = min(cap_min, n_i)
+                    else:
+                        break
             tx_bw = None
         else:
             raise ValueError(policy)

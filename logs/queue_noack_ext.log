@@ -1,0 +1,16 @@
+=== chain finished 2026-10-28T00:48:43Z
+120 tasks on 14 workers
+  10/120 tasks done, 87s elapsed
+  20/120 tasks done, 158s elapsed
+  30/120 tasks done, 236s elapsed
+  40/120 tasks done, 331s elapsed
+  50/120 tasks done, 461s elapsed
+  60/120 tasks done, 580s elapsed
+  70/120 tasks done, 725s elapsed
+  80/120 tasks done, 898s elapsed
+  90/120 tasks done, 1099s elapsed
+  100/120 tasks done, 1272s elapsed
+  110/120 tasks done, 1536s elapsed
+  120/120 tasks done, 1757s elapsed
+done in 1757s; 3060 rows
+=== noack seeds 31-60 done 2026-10-28T01:18:01Z

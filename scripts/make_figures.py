@@ -11,12 +11,12 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 RES, FIG = ROOT / "results", ROOT / "figures"
 FIG.mkdir(exist_ok=True)
 
-POLICY_ORDER = ["random", "ppo", "threshold", "nominal", "sentinel", "sentinel_triggered", "sentinel_capped_trigger"]
+POLICY_ORDER = ["random", "ppo", "whittle", "threshold", "nominal", "sentinel", "sentinel_triggered", "sentinel_capped_trigger"]
 TOPO_ORDER = ["Ground only (2 BS)", "Satellite only (2 SAT)", "Integrated (1 BS + 1 SAT)", "Integrated (2 BS + 2 SAT)", "Integrated (3 BS + 3 SAT)"]
-POLICY_LABEL = {"random": "Random", "ppo": "PPO (AoII reward, trained)", "threshold": "AoII threshold (state-aware)", "nominal": "Nominal (non-robust) SENTINEL",
+POLICY_LABEL = {"random": "Random", "ppo": "PPO (AoII reward, trained)", "whittle": "Whittle index (state-aware)", "threshold": "AoII threshold (state-aware)", "nominal": "Nominal (non-robust) SENTINEL",
                 "sentinel": "SENTINEL (robust)", "sentinel_triggered": "SENTINEL + state-aware trigger",
                 "sentinel_capped_trigger": "SENTINEL + rate-capped trigger"}
-COLORS = {"random": "#7f7f7f", "ppo": "#bcbd22", "threshold": "#1f77b4", "nominal": "#ff7f0e", "sentinel": "#d62728", "sentinel_triggered": "#9467bd",
+COLORS = {"random": "#7f7f7f", "ppo": "#bcbd22", "whittle": "#8c564b", "threshold": "#1f77b4", "nominal": "#ff7f0e", "sentinel": "#d62728", "sentinel_triggered": "#9467bd",
           "sentinel_capped_trigger": "#17becf"}
 METRICS = [("average_aoii", "Average AoII"), ("peak_aoii", "Peak AoII"), ("delivery_ratio", "Delivery ratio"),
            ("informative_ratio", "Informative update ratio"), ("sum_rate_mbps", "Delivered goodput (Mbps)"),
@@ -66,6 +66,37 @@ def bar_sweep(summ, sweep, metric, ylabel, dis_mode, fname, log=False, stat="mea
     fig.savefig(FIG / f"{fname}.pdf"); fig.savefig(FIG / f"{fname}.png"); plt.close(fig)
 
 
+def line_sweep(summ, sweep, metric, ylabel, dis_mode, fname, xlabel, log=False, stat="median", logx=False):
+    """Line plot over a numeric x for the sensitivity sweeps (scenario-set size, bandwidth per node)."""
+    d = summ[(summ.sweep == sweep) & (summ.disruption_mode == dis_mode)].copy()
+    if d.empty or f"{metric}_mean" not in d.columns:
+        return
+    d["x_value"] = pd.to_numeric(d.x_value)
+    xs = sorted(d.x_value.unique())
+    pols = [p for p in POLICY_ORDER if p in d.policy.unique()]
+    fig, ax = plt.subplots(figsize=(4.6, 3.3))
+    for p in pols:
+        sub = d[d.policy == p].set_index("x_value").reindex(xs)
+        if stat == "median" and f"{metric}_median" in sub.columns:
+            y = sub[f"{metric}_median"]
+            yerr = np.vstack([y - sub[f"{metric}_q25"], sub[f"{metric}_q75"] - y]).clip(min=0)
+        else:
+            y, yerr = sub[f"{metric}_mean"], sub[f"{metric}_ci95"]
+        ax.errorbar(xs, y, yerr=yerr, marker="o", ms=4, capsize=2, label=POLICY_LABEL.get(p, p), color=COLORS.get(p))
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel + (" (median, IQR)" if stat == "median" else " (mean, 95% CI)"))
+    ax.set_xticks(xs)
+    if log:
+        ax.set_yscale("log")
+    if logx:
+        from matplotlib.ticker import NullFormatter
+        ax.set_xscale("log"); ax.set_xticks(xs); ax.set_xticklabels([f"{x:g}" for x in xs]); ax.xaxis.set_minor_formatter(NullFormatter())
+    if len(pols) > 1:
+        ax.legend(fontsize=7, frameon=False)
+    fig.tight_layout()
+    fig.savefig(FIG / f"{fname}.pdf"); fig.savefig(FIG / f"{fname}.png"); plt.close(fig)
+
+
 def main(prefix="sweeps", fig_prefix=""):
     global FIG
     if fig_prefix:
@@ -84,6 +115,19 @@ def main(prefix="sweeps", fig_prefix=""):
     if (summ.sweep == "topology").any():
         for metric, ylabel in METRICS:
             bar_sweep(summ, "topology", metric, ylabel, "on", f"topology_{metric}", log=(metric in ("average_aoii", "peak_aoii")))
+    # sensitivity sweeps (present only in some runs)
+    if (summ.sweep == "scenario_set").any():
+        xl = "Scenario-set size L"
+        line_sweep(summ, "scenario_set", "average_aoii", "Average AoII", "on", "scenario_set_average_aoii", xl)
+        line_sweep(summ, "scenario_set", "certified_eta_mean", "Certified worst-case AoII", "on", "scenario_set_certified_eta", xl, stat="mean")
+        line_sweep(summ, "scenario_set", "certificate_holds", "Certificate validity (fraction of epochs)", "on", "scenario_set_certificate_holds", xl, stat="mean")
+        line_sweep(summ, "scenario_set", "sat_delivery_share", "Satellite delivery share", "on", "scenario_set_sat_share", xl, stat="mean")
+        line_sweep(summ, "scenario_set", "solve_time_s", "Solver time per run (s)", "on", "scenario_set_solve_time", xl, stat="mean")
+    if (summ.sweep == "capacity_limited").any():
+        xl = "Bandwidth per node (MHz), 20 UEs"
+        line_sweep(summ, "capacity_limited", "average_aoii", "Average AoII", "on", "capacity_average_aoii", xl, log=True, logx=True)
+        line_sweep(summ, "capacity_limited", "delivery_ratio", "Delivery ratio", "on", "capacity_delivery_ratio", xl, stat="mean", logx=True)
+        line_sweep(summ, "capacity_limited", "peak_aoii", "Peak AoII", "on", "capacity_peak_aoii", xl, log=True, logx=True)
     # certificate figure: certified worst case vs realized average AoII for SENTINEL and nominal
     d = raw[(raw.sweep == "ue_sweep") & (raw.disruption_mode == "on") & raw.policy.isin(["sentinel", "nominal"])]
     if len(d):
@@ -104,7 +148,7 @@ def main(prefix="sweeps", fig_prefix=""):
         for mode in summ[summ.sweep == sweep].disruption_mode.unique():
             d = summ[(summ.sweep == sweep) & (summ.disruption_mode == mode)].copy()
             d["policy"] = d.policy.map(POLICY_LABEL)
-            if sweep == "ue_sweep":
+            if sweep in ("ue_sweep", "scenario_set", "capacity_limited"):
                 d["x_value"] = pd.to_numeric(d.x_value)
             tab = d[["x_value", "policy", "n"] + [f"{c}_mean" for c in cols] + ["average_aoii_ci95", "average_aoii_median"]].sort_values(["x_value", "policy"])
             tab.columns = ["x", "policy", "n"] + cols + ["aoii_ci95", "aoii_median"]
