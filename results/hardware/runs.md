@@ -10,8 +10,15 @@
 | device_U6_k4_p1_s2_greedy | ibm_kingston | 6 | 2 | 1 | 12 | 58 | 76 | 4096 | 73.5% | yes | +0.00% | 4.0 | dbgjk11q260s73btdqa0 |
 | device_U6_k4_p1_s3_greedy | ibm_kingston | 6 | 3 | 0 | 24 | 305 | 387 | 4096 | 34.8% | yes | +0.00% | 4.0 | dbgjnmht9uhs73c8asrg |
 | device_U6_k4_p1_s3_greedy | ibm_kingston | 6 | 3 | 1 | 14 | 120 | 187 | 4096 | 69.6% | yes | +0.00% | 4.0 | dbgjnmht9uhs73c8asrg |
+| device_U6_k4_p1_s5_greedy | ibm_kingston | 6 | 5 | 0 | 12 | 58 | 74 | 4096 | 75.9% | yes | +0.00% | 4.0 | dbglprcdgr2s73crp4sg |
+| device_U6_k4_p1_s5_greedy | ibm_kingston | 6 | 5 | 1 | 12 | 58 | 74 | 4096 | 76.4% | yes | +0.00% | 4.0 | dbglprcdgr2s73crp4sg |
+| device_U6_k4_p1_s6_greedy | ibm_fez | 6 | 6 | 0 | 8 | 38 | 77 | 4096 | 86.5% | yes | +0.00% | 4.0 | dbgls5kdgr2s73crp820 |
+| device_U6_k4_p1_s6_greedy | ibm_fez | 6 | 6 | 1 | 16 | 79 | 77 | 4096 | 61.8% | yes | +0.00% | 4.0 | dbgls5kdgr2s73crp820 |
+| device_U6_k4_p1_s7_greedy | ibm_fez | 6 | 7 | 0 | 12 | 58 | 76 | 4096 | 71.9% | yes | +0.00% | 4.0 | dbglse8te5oc738ieka0 |
+| device_U6_k4_p1_s7_greedy | ibm_fez | 6 | 7 | 1 | 18 | 142 | 171 | 4096 | 59.4% | yes | +0.00% | 4.0 | dbglse8te5oc738ieka0 |
+| device_U10_k4_p1_s1_greedy | ibm_kingston | 10 | 1 | 0 | 38 | 606 | 626 | 4096 | 2.6% | yes | +0.00% | 3.0 | dbgls09q260s73btht2g |
 
-Device domains sampled: 6; best sample equals the noiseless optimum in 6 of 6; total QPU time 14 s over 4 jobs; feasible-shot fraction 34.8% to 73.5%.
+Device domains sampled: 13; best sample equals the noiseless optimum in 13 of 13; total QPU time 29 s over 8 jobs; feasible-shot fraction 2.6% to 86.5%.
 
 ## Noise models (offline)
 

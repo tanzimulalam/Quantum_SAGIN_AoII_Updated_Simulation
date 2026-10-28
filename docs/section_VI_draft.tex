@@ -200,34 +200,51 @@ Third, candidate pruning with $\kappa=4$ never changed the exact optimum.
 %-----------------------------------------------------------------------
 
 Table~\ref{tab:hardware} lists the transpiled circuits for a Heron processor (depth 1, greedy warm start) and the
-results of sampling them on the device noise models and on the \texttt{ibm\_kingston} processor (Heron r2, 156 qubits,
-27 October 2026, job \texttt{dbgjgr9t9uhs73c8act0}).
+results of sampling them on the device noise models and on the \texttt{ibm\_kingston} and \texttt{ibm\_fez}
+processors (Heron r2, 156 qubits, 27 and 28 October 2026; job identifiers in the repository).
 \begin{table}[!t]
 \centering
-\caption{Hardware-Sized Circuits (6 UEs, $\kappa=4$) and Sampling Results}
+\caption{Transpiled Circuits ($\kappa=4$, depth 1, greedy start) and Sampling Results on Noise Models and Real Devices}
 \label{tab:hardware}
 \footnotesize
 \resizebox{\columnwidth}{!}{%
-\begin{tabular}{|l|c|c|c|c|c|}
+\begin{tabular}{|l|c|c|c|c|c|c|}
 \hline
-\textbf{Domain} & \textbf{Qubits} & \textbf{2q gates / depth} & \textbf{Backend} & \textbf{Feasible shots} & \textbf{Best sample optimal?} \\
+\textbf{Instance} & \textbf{Dom.} & \textbf{Qubits} & \textbf{2q gates / depth} & \textbf{Backend} & \textbf{Feasible shots} & \textbf{Best = opt.?} \\
 \hline
-0 & 18 & 137 / 169 & FakeTorino (Heron) & 54.4\% & yes \\
-1 & 20 & 279 / 355 & FakeTorino (Heron) & 35.5\% & yes \\
-0 & 18 & 139 / 188 & FakeFez (Heron r2) & 69.6\% & yes \\
-1 & 20 & 301 / 436 & FakeFez (Heron r2) & 47.6\% & yes \\
-0 & 18 & 139 / 187 & \texttt{ibm\_kingston} (device) & 63.3\% & yes \\
+6 UEs, s1 & 0 & 18 & 137 / 169 & FakeTorino (model) & 52.1\% & yes \\
+6 UEs, s1 & 1 & 20 & 279 / 355 & FakeTorino (model) & 33.1\% & yes \\
+6 UEs, s1 & 0 & 18 & 139 / 188 & FakeFez (model) & 69.6\% & yes \\
+6 UEs, s1 & 1 & 20 & 301 / 436 & FakeFez (model) & 47.6\% & yes \\
+\hline
+6 UEs, s1 & 0 & 18 & 139 / 187 & \texttt{ibm\_kingston} & 63.3\% & yes \\
+6 UEs, s1 & 1 & 20 & 301 / 428 & \texttt{ibm\_kingston} & 42.7\% & yes \\
+6 UEs, s2 & 0 & 18 & 139 / 187 & \texttt{ibm\_kingston} & 60.9\% & yes \\
+6 UEs, s2 & 1 & 12 & 58 / 76 & \texttt{ibm\_kingston} & 73.5\% & yes \\
+6 UEs, s3 & 0 & 24 & 305 / 387 & \texttt{ibm\_kingston} & 34.8\% & yes \\
+6 UEs, s3 & 1 & 14 & 120 / 187 & \texttt{ibm\_kingston} & 69.6\% & yes \\
+6 UEs, s5 & 0 & 12 & 58 / 74 & \texttt{ibm\_kingston} & 75.9\% & yes \\
+6 UEs, s5 & 1 & 12 & 58 / 74 & \texttt{ibm\_kingston} & 76.4\% & yes \\
+6 UEs, s6 & 0 & 8 & 38 / 77 & \texttt{ibm\_fez} & 86.5\% & yes \\
+6 UEs, s6 & 1 & 16 & 79 / 77 & \texttt{ibm\_fez} & 61.8\% & yes \\
+6 UEs, s7 & 0 & 12 & 58 / 76 & \texttt{ibm\_fez} & 71.9\% & yes \\
+6 UEs, s7 & 1 & 18 & 142 / 171 & \texttt{ibm\_fez} & 59.4\% & yes \\
+10 UEs, s1 & 0 & 38 & 606 / 626 & \texttt{ibm\_kingston} & 2.6\% & yes \\
 \hline
 \end{tabular}%
 }
 \end{table}
 Device noise breaks the one-hot structure of a third to two thirds of the shots; the classical decoder discards them,
 and the best surviving sample equals the noiseless optimum in every case, so the schedule decoded from noisy samples is
-certified at the exact ILP optimum ($\eta=2.506$). On the real device, 63.3\% of 4096 shots decode to one-hot,
-capacity-feasible assignments, between the two noise-model predictions (54.4\% and 69.6\%), and the best device sample
-again equals the noiseless optimum, so the device-decoded schedule attains the exact ILP optimum with a 0.00\% gap. The
-device job used 3~s of QPU time; all parameter optimization and the ADMM coordination were performed on the simulator,
-and the device executed only the final sampling circuit.
+certified at the exact ILP optimum. On the real devices, thirteen domains of seven instances were sampled with 4096
+shots each (29~s of QPU time in total); all parameter optimization and the ADMM coordination were performed on the
+simulator, the device executed only the final sampling circuit of each domain, and the 38-qubit domain, beyond the
+simulator, used the angles of the largest simulated domain of its run. In every domain the best feasible device
+sample equals the noiseless optimum and every decoded network schedule attains the exact ILP optimum. The
+feasible-shot fraction measures the device noise: 60 to 86\% at 8 to 18 qubits (up to 139 two-qubit gates), 35 to
+43\% at 20 to 24 qubits (about 300 gates), and 2.6\% at 38 qubits (606 gates), bracketed by the two noise models at
+18 to 20 qubits. A few hundred additional two-qubit gates would leave fewer than one feasible shot in a thousand,
+which places the present limit of the quantum step at about ten UEs per domain at depth~1 without error mitigation.
 
 On these domains the greedy assignment is itself optimal, and the role of the QAOA layers is to concentrate a
 constrained sampler: from the $W$ state, one layer raises the probability of drawing an optimal assignment from the

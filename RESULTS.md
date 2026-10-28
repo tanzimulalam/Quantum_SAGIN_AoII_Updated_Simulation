@@ -217,23 +217,39 @@ On the Heron r2 model (FakeFez) the same circuits (139 and 301 two-qubit gates) 
 valid, and the decoded schedule is again the exact optimum. The same script submits these circuits to a real device
 with `--mode device`, one sampling job per domain (a few seconds of QPU time).
 
-### Real device: ibm_kingston (Heron r2, 156 qubits), 27 October 2026
+### Real devices: ibm_kingston and ibm_fez (Heron r2, 156 qubits), 27 and 28 October 2026
 
-Same instance (6 UEs, k_cand 4, seed 1), depth 1, greedy warm start, 4096 shots, domain 0 only
-(`results/hardware/device_U6_k4_p1_s1_greedy/`, job id `dbgjgr9t9uhs73c8act0`, 3 s of QPU time reported by the service,
-19.5 s sampling wall time including queue). All angle optimization and the ADMM coordination ran on the simulator; the
-device executed only the final sampling circuit.
+`results/hardware/runs.md` (all runs), `results/hardware/device_*/` (summary, raw counts, job ids). Depth 1, greedy
+warm start, 4096 shots per domain. All scenario weights, ADMM targets and QAOA angles are optimized on the local
+simulator; each device job executes only the final sampling circuit of one or two domains. Domains above 26 qubits
+cannot be simulated, so their angles are transferred from the largest simulated domain of the same run (recorded as
+`params_source` in the summary); the batch script skips instances whose only domain is that large (seed 4: 44 qubits).
 
-| Domain | Qubits | Two-qubit gates | Depth | Device one-hot samples | Device feasible samples | Best decoded energy | Noiseless best |
-|---|---|---|---|---|---|---|---|
-| 0 | 18 | 139 | 187 | 63.3% | 63.3% | 1.9799 | 1.9799 |
+| Instance | Domain | Qubits | 2q gates | Depth | Device | Feasible shots | Best sample = noiseless optimum | Decoded schedule vs ILP |
+|---|---|---|---|---|---|---|---|---|
+| 6 UEs, seed 1 | 0 | 18 | 139 | 187 | kingston | 63.3% | yes | 0.00% |
+| 6 UEs, seed 1 | 1 | 20 | 301 | 428 | kingston | 42.7% | yes | 0.00% |
+| 6 UEs, seed 2 | 0 | 18 | 139 | 187 | kingston | 60.9% | yes | 0.00% |
+| 6 UEs, seed 2 | 1 | 12 | 58 | 76 | kingston | 73.5% | yes | 0.00% |
+| 6 UEs, seed 3 | 0 | 24 | 305 | 387 | kingston | 34.8% | yes | 0.00% |
+| 6 UEs, seed 3 | 1 | 14 | 120 | 187 | kingston | 69.6% | yes | 0.00% |
+| 6 UEs, seed 5 | 0 | 12 | 58 | 74 | kingston | 75.9% | yes | 0.00% |
+| 6 UEs, seed 5 | 1 | 12 | 58 | 74 | kingston | 76.4% | yes | 0.00% |
+| 6 UEs, seed 6 | 0 | 8 | 38 | 77 | fez | 86.5% | yes | 0.00% |
+| 6 UEs, seed 6 | 1 | 16 | 79 | 77 | fez | 61.8% | yes | 0.00% |
+| 6 UEs, seed 7 | 0 | 12 | 58 | 76 | fez | 71.9% | yes | 0.00% |
+| 6 UEs, seed 7 | 1 | 18 | 142 | 171 | fez | 59.4% | yes | 0.00% |
+| 10 UEs, seed 1 | 0 | 38 | 606 | 626 | kingston | 2.6% | yes (greedy reference) | 0.00% |
 
-The best device sample equals the noiseless optimum, and the network schedule decoded from the device samples has
-eta = 2.5062, the exact ILP optimum (gap 0.00%). The surviving-shot fraction (63.3%) lies between the two noise-model
-predictions for this circuit (54.4% on FakeTorino, 69.6% on FakeFez). The mean QUBO energy over all device shots is
-2.61 against 1.98 at the optimum, so the device distribution is visibly noisier than the noiseless one, but the
-classical decoder only needs the best feasible sample. This is the real-hardware counterpart of the noise-model rows
-above and closes the "quantum-assisted" claim at the sizes a current device can hold.
+Thirteen device domains on six 6-UE instances and one 10-UE instance, 29 s of QPU time over eight jobs. In every
+domain the best feasible device sample equals the noiseless optimum (for the 38-qubit domain, the greedy assignment,
+which the exact ILP confirms as optimal), and every decoded network schedule attains the exact ILP optimum. The
+feasible-shot fraction is the honest measure of device noise: 60 to 86% at 8 to 18 qubits and up to 139 two-qubit
+gates, 35 to 43% at 20 to 24 qubits and about 300 gates, and 2.6% (107 of 4096 shots) at 38 qubits and 606 gates. The
+noise-model predictions bracket the device values at 18 to 20 qubits (FakeTorino 52 and 33%, FakeFez 70 and 48%,
+device 63 and 43%). At the 38-qubit scale the device still contains the optimum in 4096 shots, but a few hundred more
+two-qubit gates would push the feasible fraction below one shot in a thousand; that, and not the simulator, is now the
+documented limit of the quantum step.
 
 ### What the QAOA layers contribute (noiseless, 6-UE domains of 12 to 24 qubits, 3 seeds x 2 domains x 3 restarts)
 
@@ -424,7 +440,8 @@ Paired tests (Wilcoxon, Holm-corrected within the sweep, 60 seeds):
   epigraph encoding, within 12% at 50 UEs, and limited by shared-satellite coordination at 75 to 100 UEs; the epigraph
   encoding is unusable beyond a few UEs.
 - XY-mixer QAOA solves hardware-sized domains (12 to 24 qubits) to optimality in simulation and recovers the optimum
-  from 36 to 70% surviving shots on Heron noise models and from 63% surviving shots on the real ibm_kingston device
-  (18 qubits, 139 two-qubit gates, 3 s of QPU time, decoded schedule at the exact ILP optimum); it is a correct constrained sampler (1.5 to 2.2 times the
+  from 36 to 70% surviving shots on Heron noise models and, on the real ibm_kingston and ibm_fez devices, from 35 to
+  86% surviving shots at 8 to 24 qubits and 2.6% at 38 qubits (13 of 13 domains with the best sample at the noiseless
+  optimum, every decoded schedule at the exact ILP optimum, 29 s of QPU time); it is a correct constrained sampler (1.5 to 2.2 times the
   uniform concentration on the optimal set at depth 1 to 2), not a better optimizer than greedy, which is already
   optimal on these domains.

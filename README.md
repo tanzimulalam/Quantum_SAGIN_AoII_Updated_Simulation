@@ -74,8 +74,9 @@ Hardware (IBM Quantum Open Plan). Everything is optimized on the simulator; the 
 .venv/Scripts/python.exe scripts/hardware_run.py --mode device --ues 6 --domains 0              # real device; needs a saved IBM Quantum account
 ```
 
-A device run on `ibm_kingston` (27 October 2026, 18 qubits, 4096 shots, 3 s of QPU time) is in
-`results/hardware/device_U6_k4_p1_s1_greedy/`; the decoded schedule equals the exact ILP optimum (see RESULTS.md).
+Device runs on `ibm_kingston` and `ibm_fez` (27 and 28 October 2026; thirteen domains of 8 to 38 qubits, 4096 shots
+each, 29 s of QPU time in total) are in `results/hardware/device_*/` and tabulated in `results/hardware/runs.md`; every
+decoded schedule equals the exact ILP optimum (see RESULTS.md). `scripts/device_batch.sh` reproduces the batch.
 
 The device mode never reads a token from the command line or the repository. Save your account once in your own
 Python session with `QiskitRuntimeService.save_account(channel="ibm_quantum_platform", token=..., overwrite=True)`,
