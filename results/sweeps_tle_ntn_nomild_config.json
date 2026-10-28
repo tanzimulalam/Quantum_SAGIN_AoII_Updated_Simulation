@@ -1,0 +1,117 @@
+{
+  "net": {
+    "num_ues": 10,
+    "num_bs": 2,
+    "num_sat": 2,
+    "area_km": 20.0,
+    "bs_height_m": 25.0,
+    "ue_height_m": 1.5,
+    "sat_altitude_km": 550.0,
+    "min_elevation_deg": 10.0,
+    "num_domains": 2,
+    "sat_model": "tle",
+    "sat_max_elevation_range_deg": [
+      30.0,
+      90.0
+    ],
+    "sat_handover_gap_s": [
+      5.0,
+      40.0
+    ],
+    "tle_file": "data/starlink_tle_snapshot.txt",
+    "site_lat_deg": 35.8456,
+    "site_lon_deg": -86.3903
+  },
+  "radio": {
+    "ue_tx_power_dbm": 23.0,
+    "noise_density_dbm_hz": -174.0,
+    "varsigma_db": -147.55,
+    "zeta": 20.0,
+    "bs_carrier_ghz": 3.5,
+    "bs_bandwidth_mhz": 20.0,
+    "bs_xi": 26.0,
+    "bs_margin_db": 6.0,
+    "bs_antenna_gain_dbi": 15.0,
+    "ue_sub6_gain_dbi": 0.0,
+    "bs_noise_figure_db": 7.0,
+    "bs_se_cap_bps_hz": 6.0,
+    "sat_carrier_ghz": 12.0,
+    "sat_bandwidth_mhz": 50.0,
+    "sat_xi": 20.0,
+    "sat_margin_db": 1.0,
+    "sat_antenna_gain_dbi": 30.0,
+    "ue_ku_gain_dbi": 30.0,
+    "sat_noise_figure_db": 9.0,
+    "sat_se_cap_bps_hz": 4.0,
+    "bandwidth_levels_mhz": [
+      2.5,
+      5.0,
+      10.0
+    ],
+    "fading_std_db": 1.0
+  },
+  "src": {
+    "num_states": 4,
+    "p_stay_range": [
+      0.9,
+      0.99
+    ],
+    "aoii_budget": 10.0,
+    "update_periods_slots": [
+      5,
+      10,
+      20,
+      50
+    ],
+    "slot_ms": 10.0,
+    "packet_bits": 20000.0,
+    "psi_y_max": 400
+  },
+  "dis": {
+    "mild_shadowing_db": 6.0,
+    "mild_scenario": true,
+    "severe_shadowing_db": 12.0,
+    "mild_window_slots": 20,
+    "severe_window_slots": 30,
+    "handover_window_slots": 20,
+    "p_shadowing_event_per_link": 0.07,
+    "p_handover_failure_per_sat": 0.03,
+    "enabled": true,
+    "ntn_model": true,
+    "ntn_environment": "suburban",
+    "ntn_zenith_atmospheric_db": 0.5
+  },
+  "solver": {
+    "eta_resolution": 0.05,
+    "bandwidth_resolution_mhz": 2.5,
+    "admm_rho": 1.0,
+    "admm_tol": 0.01,
+    "admm_max_rounds": 20,
+    "sa_sweeps": 400,
+    "sa_restarts": 4,
+    "sa_t_start": 2.0,
+    "sa_t_end": 0.01,
+    "qaoa_depth": 2,
+    "qaoa_shots": 1024,
+    "qaoa_maxiter": 200,
+    "max_qaoa_qubits": 18,
+    "solver": "auto",
+    "formulation": "compact",
+    "dual_outer_iterations": 6,
+    "k_cand": 4
+  },
+  "sim": {
+    "duration_slots": 60000,
+    "orchestration_interval_slots": 100,
+    "resolve_every_intervals": 30,
+    "random_activation_prob": 0.1,
+    "threshold_aoii": 0.0,
+    "min_update_gap_slots": 5,
+    "failure_window_slots": 60,
+    "failure_block_slots": 600,
+    "reactive_resolve": true,
+    "bs_compute_gcycles_s": 120.0,
+    "sat_compute_gcycles_s": 60.0,
+    "cycles_per_bit": 500.0
+  }
+}

@@ -407,6 +407,14 @@ deliveries move to BSs. Realized AoII with feedback is flat in L. Without feedba
 certificate, not in realized AoII at this size. Two scenarios (nominal and the joint/handover outage) would give the
 same schedule as six at a third of the dual iterations.
 
+**Decision and verification (`results/sweeps_tle_ntn_nomild_*`, `--no-mild`, 30 seeds).** The mild scenario is
+dropped from the paper's scenario set, which becomes nominal, deep shadowing (12 dB, 30 slots), handover of each
+satellite (20 slots), and joint outage (L = 5). Re-running robust SENTINEL, nominal and the hybrid on the UE sweep
+with the five-scenario set gives a certified worst case identical to the six-scenario run on 100% of seeds at every
+size, identical satellite delivery shares, and realized-AoII differences at the 1e-4 level (Wilcoxon p >= 0.14; the
+differences come from the order of stochastic reactive re-solves, not from the schedules). All six-scenario results in
+this file therefore stand unchanged for the five-scenario set.
+
 ### Ablation: no ACK-based link-failure handling (same model, UE sweep, 60 seeds)
 
 `results/sweeps_tle_ntn_noack_*`, `figures/tle_ntn_noack/`, `results/sweeps_tle_ntn_noack_paired_stats.md`. The

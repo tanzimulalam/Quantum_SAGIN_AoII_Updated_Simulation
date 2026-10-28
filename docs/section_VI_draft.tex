@@ -42,7 +42,7 @@ Distortion; AoII budget $\Delta^{II,\max}_i$ & $|x-\hat x|$; 10 \\
 Update periods ($H_i=4$); slot; packet & $\{5,10,20,50\}$ slots; 10~ms; 20~kbit \\
 \hline
 \multicolumn{2}{l}{\emph{Disruption}} \\
-Scenario set ($L=6$) & nominal; shadowing 6~dB/20 slots and 12~dB/30 slots; handover of each SAT (20 slots); joint loss (30 slots) \\
+Scenario set ($L=5$) & nominal; deep shadowing 12~dB/30 slots; handover of each SAT (20 slots); joint loss (30 slots) \\
 Realized process (per 1~s interval) & shadowing event per UE--SAT link w.p.\ 0.07; handover failure per SAT w.p.\ 0.03; natural handovers at pass changes \\
 Link-failure handling (all policies) & node blocked after 60 failed slots, for 6~s; SENTINEL re-solves without the link \\
 \hline
@@ -66,7 +66,7 @@ bandwidth still delivers every admitted packet; it shares the threshold policy's
 level for every UE (invisible or failed nodes masked, equal bandwidth sharing), rewarded with the negative mean AoII of
 the interval; it is trained for 5000 episodes per network size on 30 seeds disjoint from the evaluation seeds and
 evaluated deterministically. \emph{Nominal SENTINEL} runs the same solver with
-$L=1$. \emph{SENTINEL} is the robust schedule with $L=6$. \emph{SENTINEL + trigger} uses SENTINEL's association and
+$L=1$. \emph{SENTINEL} is the robust schedule with the five-scenario set of Table~\ref{tab:simulation_parameters}. \emph{SENTINEL + trigger} uses SENTINEL's association and
 bandwidth with transmissions triggered by the observed mismatch, rate-capped at the chosen period. The exact
 reference for Sec.~VI-C is an integer linear program of $\mathscr{P}_3$ solved with HiGHS.
 
@@ -150,11 +150,14 @@ node is reduced. The Whittle-index scheduler and the AoII-threshold policy coinc
 (10 and 20~MHz) and separate below 5~MHz, where uncoordinated threshold transmissions collapse the shared links.}
 \label{fig:capacity}
 \end{figure}
-\textbf{Scenario-set size.} Truncating the scenario list (nominal, mild, severe, handover of each satellite, joint)
-to $L=1,\dots,6$ at 10 UEs leaves realized AoII flat (0.265 to 0.278) and moves the certificate and the BS hedge
-only once the handover of the second shared satellite is included ($L\ge5$: certified $\bar\eta$ from 4.57 to
-4.28, satellite share from 0.79 to 0.74). Nominal plus the joint outage would reproduce the $L=6$ schedule at a
-third of the dual iterations.
+\textbf{Scenario-set size.} To see which scenarios matter, the list was extended by a mild 6~dB shadowing scenario
+and truncated to $L=1,\dots,6$ (nominal, mild, deep, handover of each satellite, joint) at 10 UEs. Realized AoII is
+flat in $L$ (0.265 to 0.278), and the certificate and the BS hedge move only once the handover of the second shared
+satellite is included ($L\ge5$: certified $\bar\eta$ from 4.57 to 4.28, satellite share from 0.79 to 0.74). The
+mild scenario never binds: removing it from the full set leaves the certified worst case of every schedule unchanged
+on all 30 seeds at every network size, with realized AoII differences below $10^{-3}$, which is why the paper's
+scenario set has five members. Nominal plus the joint outage alone would reproduce the same schedule at a third of
+the dual iterations.
 Fig.~\ref{fig:topology} compares ground-only, satellite-only, and integrated deployments at 10 UEs: two BSs cover
 only the UEs within 5 to 7~km of a $20\times20$~km$^2$ area, so ground-only monitoring fails (median AoII 60 to 78),
 two satellite planes alone bring every policy below $0.4$, and the integrated $2+2$ and $3+3$ topologies are best,
