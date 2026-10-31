@@ -155,9 +155,10 @@ nominal schedule improves even more (0.269 versus 0.468), and the certified wors
 margin was therefore an artifact of the weaker solver, which is why both runs are reported. Robust SENTINEL still has
 the lower realized AoII in 80 to 93% of seeds. Qubits per domain: 22 (5 UEs), 34 (10), 46 (15), 58 (20).
 
-The certificate held in 86% of epochs (98% with the epigraph solver). The compact solver's certificates are tighter
-(for example 3.50 versus 5.06 on the same seed with the same realized AoII), so fewer coverage-gap epochs fall under
-the bound; every violation is still a satellite pass gap longer than any scenario window.
+The certificate held in 98.0% of epochs for both the robust and the nominal schedule (`results/sweeps_compact_raw.csv`;
+an earlier statement of 86% in this file referred to a run that was superseded by the ADMM corrections). Every
+violation is a satellite pass gap longer than any scenario window, which the synthetic pass model produces in a few
+seeds.
 
 ### Exact-optimum validation of the compact formulation
 
