@@ -19,7 +19,7 @@ def main():
     d = pd.read_csv(ROOT / "results" / "qaoa_depth_shots.csv")
     d = d[d.scale_mode == "max"]
     shots = sorted(d.shots.unique())
-    fig, ax = plt.subplots(figsize=(4.6, 3.2))
+    fig, ax = plt.subplots(figsize=(4.6, 3.6))
     styles = {("greedy", 1): ("#1f77b4", "o", "-"), ("greedy", 2): ("#ff7f0e", "s", "-"),
               ("w", 1): ("#2ca02c", "o", "--"), ("w", 2): ("#d62728", "s", "--")}
     for (init, depth), (c, m, ls) in styles.items():
@@ -29,7 +29,7 @@ def main():
     ax.axhline(d.p_uniform.mean(), color="k", ls=":", lw=1, label="uniform over one-hot subspace")
     ax.set_xscale("log"); ax.set_xticks(shots); ax.set_xticklabels([str(x) for x in shots]); ax.xaxis.set_minor_formatter(NullFormatter())
     ax.set_xlabel("Shots per optimizer evaluation"); ax.set_ylabel("P(sample is an optimal assignment)")
-    ax.set_ylim(0, 1.05); ax.legend(fontsize=7, loc="center right", frameon=False)
+    ax.set_ylim(0, 1.05); ax.legend(fontsize=7, loc="upper center", bbox_to_anchor=(0.5, -0.2), ncol=3, frameon=False)
     fig.tight_layout()
     fig.savefig(ROOT / "figures" / "qaoa_depth_shots.pdf"); fig.savefig(ROOT / "figures" / "qaoa_depth_shots.png")
     print("written")
