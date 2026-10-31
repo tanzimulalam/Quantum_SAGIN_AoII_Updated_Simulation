@@ -5,33 +5,22 @@
 
 This paper asked how a satellite-ground edge network should schedule status updates when what matters is whether the
 edge estimate is correct, and when the satellite links that carry most of the traffic fail for minutes at a time. We
-formulated the question as the robust problem VANGUARD, in which update rates, association, and bandwidth are chosen
-to minimize the worst-case time-average AoII over a set of disruption scenarios, and showed that a renewal-interval
-decomposition reduces the history-dependent AoII to a tabulated cost per inter-delivery interval, so that the problem
-becomes a minimax assignment over binary variables. SENTINEL solves it by dualizing the minimax into scenario weights
-that a classical loop updates, encoding each domain's linear subproblem as a compact QUBO whose one-hot structure the
-XY mixer of the circuit preserves, and coordinating the domains with the sharing form of ADMM; every schedule it
-returns carries an exactly computed worst-case certificate.
+formulated the robust problem VANGUARD, reduced the history-dependent AoII to a tabulated cost per inter-delivery
+interval through a renewal-interval decomposition, and solved the resulting minimax assignment with SENTINEL, which
+dualizes the minimax into classically updated scenario weights, encodes each domain's linear subproblem as a compact
+QUBO whose one-hot structure the XY mixer preserves, coordinates the domains by ADMM, and certifies every schedule by
+its exact worst case.
 
-The evaluation used Starlink ephemerides, the 3GPP TR 38.811 channel, acknowledgement feedback for every policy, an
-exact integer-programming reference, paired tests over 30 to 60 seeds, and two IBM Heron processors. Its findings are
-these. The certificate held in 98.7\% of orchestration epochs under real passes, and its violations are
-non-line-of-sight passes outside the scenario set. The robust schedule's certificate is 2 to 7\% below the nominal
-schedule's in two thirds to all of the seeds, while the two are indistinguishable in realized AoII with and without
-failure feedback; the value of the scenario set is the guarantee. A per-slot policy that transmits whenever its
-observed AoII is positive is the strongest heuristic when feedback exists, coincides with the Whittle-index scheduler
-at the paper's bandwidths, and loses to the capacity-aware index scheduler when bandwidth per node is cut; SENTINEL
-with the same trigger comes within 10 to 20\% of it while keeping the certificate, and is 25 to 30\% better than it at
-15 to 20 UEs when feedback is removed. The compact formulation needs four to five times fewer qubits than the direct
-epigraph encoding, is exact through 25 UEs, and is limited at 75 to 100 UEs by the coordination of shared satellites.
-Thirteen device domains of 8 to 38 qubits all decoded to the exact optimum, with the fraction of usable shots falling
-from 86\% to 2.6\% over that range, and six re-samples with dynamical decoupling and twirling lowered that fraction
-rather than raised it; at these sizes the quantum sampler is correct but not a better optimizer than greedy
-association, and the instances on which it could be require one to two hundred qubits per domain.
-
-Three directions follow. The coordination of many domains sharing a few satellites is the bottleneck above 50 UEs,
-and a coordinator that negotiates per-UE assignments rather than aggregate bandwidth may remove it. The scenario set
-should be learned from the pass statistics of the site rather than fixed, since the handover scenario was the one
-that mattered and the shadowing scenario was outrun by non-line-of-sight passes. And the question of whether a
-constrained quantum sampler concentrates on the optimal set at the 150-qubit scale, where greedy association starts
-to fail, is open and will be answered on hardware rather than in simulation.
+Under Starlink passes and the TR 38.811 channel the certificate held in 98.7\% of epochs, the robust schedule's
+certificate was 2 to 7\% below the nominal one while the two were indistinguishable in realized AoII with and without
+failure feedback, and SENTINEL with a state-aware trigger came within 10 to 20\% of the best per-slot heuristic, which
+coincides with the Whittle-index scheduler at these bandwidths, while beating it by 25 to 30\% at 15 to 20 UEs when
+feedback is removed. The compact formulation needs four to five times fewer qubits than a direct epigraph encoding,
+is exact through 25 UEs, and is limited at 75 to 100 UEs by the coordination of shared satellites. Thirteen device
+domains of 8 to 38 qubits all decoded to the exact optimum, with the fraction of usable shots falling from 86\% to
+2.6\% and not improved by error suppression; at these sizes the quantum sampler is correct but not a better optimizer
+than greedy association. Three directions follow: a coordinator that negotiates per-UE assignments rather than
+aggregate bandwidth, to remove the bottleneck above 50 UEs; a scenario set learned from the pass statistics of the
+site, since the handover scenario was the one that mattered; and the open question of whether a constrained quantum
+sampler concentrates on the optimal set at the 150-qubit scale where greedy association starts to fail, which will be
+answered on hardware rather than in simulation.

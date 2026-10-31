@@ -117,16 +117,7 @@ qubits of domain $k$ is
     \label{eq:Nk_compact}
 \end{equation}
 independent of $L$. With the parameters of Section~VI and two domains, this is 22, 34, 46 and 58 qubits per domain at
-5, 10, 15 and 20 UEs, against 120 to 260 for the epigraph encoding of the same instances
-(Fig.~\ref{fig:qubits}).
-
-\begin{figure}[!t]
-\centering
-\includegraphics[width=0.85\columnwidth]{figures/qubits_compact_vs_epigraph.pdf}
-\caption{Qubits per domain of the compact formulation~\eqref{eq:Nk_compact} and of the direct epigraph encoding of
-$\mathscr{P}_3$ (one epigraph register and one slack register per scenario) for the instances of Section~VI.}
-\label{fig:qubits}
-\end{figure}
+5, 10, 15 and 20 UEs, against 120 to 260 for the epigraph encoding of the same instances.
 
 %-----------------------------------------------------------------------
 \subsection{Ising Mapping and XY-Mixer QAOA}
@@ -195,17 +186,15 @@ violation in the duals. The round ends when the primal residual $\bigl(\sum_{j,k
 -z_{jk}^{(r+1)})^2\bigr)^{1/2}$ and the dual residual $\varrho\bigl(\sum_{j,k}(z_{jk}^{(r+1)}-z_{jk}^{(r)})^2\bigr)^{1/2}$
 fall below a tolerance or after $R_{\max}$ rounds; $\varrho$ is adapted by residual balancing.
 
-Two details decide whether this loop produces good schedules, and both were learned from failures. First, the targets
-are initialized from an uncoupled round ($\varrho=0$), projected onto capacity, and not from the equal share
-$B_j/K_j$. With equal-share targets and the two-sided quadratic coordination term, every domain is pulled toward using
-exactly its share of every shared satellite whether or not it needs it, and the loop declares convergence after two
-rounds at a schedule that we measured to be 60 to 560\% above the optimum at 50 to 100 UEs. Second, $\varrho$ is scaled
-to the mean per-UE spread of the weighted costs $a_v$, so that one bandwidth unit of deviation from the target costs
-about one typical per-UE cost difference; a penalty two orders of magnitude larger than the cost differences, which
-is what a generic choice produced, makes the coordination term the only thing the inner solver sees. If no
-capacity-feasible network schedule has been found when the loop stops, a greedy repair moves UEs from overloaded
-satellites to the candidate with the smallest increase in worst-case cost at a node with spare capacity. The
-complete procedure is given in Algorithm~\ref{alg:SENTINEL}.
+Two details decide whether this loop produces good schedules. The targets are initialized from an uncoupled round
+($\varrho=0$) projected onto capacity, not from the equal share $B_j/K_j$: with equal-share targets the two-sided
+coordination term pulls every domain toward using exactly its share of every shared satellite whether it needs it or
+not, and the loop converges after two rounds at schedules we measured to be 60 to 560\% above the optimum at 50 to
+100 UEs. And $\varrho$ is scaled to the mean per-UE spread of the weighted costs $a_v$, so that one bandwidth unit of
+deviation costs about one typical per-UE cost difference; a generic penalty two orders of magnitude larger makes the
+coordination term the only thing the inner solver sees. If no capacity-feasible network schedule exists when the loop
+stops, a greedy repair moves UEs from overloaded satellites to the candidate with the smallest increase in worst-case
+cost at a node with spare capacity. The complete procedure is Algorithm~\ref{alg:SENTINEL}.
 
 \begin{algorithm}[!t]
 \caption{SENTINEL: Distributed Robust Orchestration for VANGUARD}
@@ -264,22 +253,21 @@ heavy-hex processor, routing a domain of 18 to 24 qubits yielded 58 to 305 two-q
 every pair of local variables, needs $\hat N_k(\hat N_k-1)/2$ rotations per layer with $\hat N_k$ three to five times
 larger.
 
-\textbf{Time.} The offline tabulation of $\Psi_i$ costs $\mathcal{O}(Y^{\max}|\mathcal{X}_i|^3+|\mathcal{X}_i|
-(Y^{\max})^2)$ per UE and the coefficients $\psi^{(\ell)}_{imqh}$ cost $\mathcal{O}(L\sum_i|\mathscr{A}_i|)$ lookups,
-once per set of sources and scenarios. Assembling and mapping $F_k$ costs $\mathcal{O}(\hat N_k^2)$. If the angle
-optimizer runs $I_{\mathrm{QAOA}}$ iterations with $N_{\mathrm{shot}}$ shots each, the quantum work of domain $k$ per
-round is $\mathcal{O}(I_{\mathrm{QAOA}}\,p\,N_{\mathrm{shot}}\,G_k)$ with $G_k$ the gate count above, the ADMM updates
-cost $\mathcal{O}(\sum_j K_j)$ per round, and the certificate costs $\mathcal{O}(L|\mathscr{U}|)$. With the domains
-run in parallel, the wall-clock cost of a solve is
+\textbf{Time.} Tabulating $\Psi_i$ costs $\mathcal{O}(Y^{\max}|\mathcal{X}_i|^3+|\mathcal{X}_i|(Y^{\max})^2)$ per
+UE and the coefficients $\psi^{(\ell)}_{imqh}$ cost $\mathcal{O}(L\sum_i|\mathscr{A}_i|)$ lookups, once per set of
+sources and scenarios; assembling and mapping $F_k$ costs $\mathcal{O}(\hat N_k^2)$. With $I_{\mathrm{QAOA}}$
+optimizer iterations of $N_{\mathrm{shot}}$ shots, the quantum work of domain $k$ per round is
+$\mathcal{O}(I_{\mathrm{QAOA}}\,p\,N_{\mathrm{shot}}\,G_k)$ with $G_k$ the gate count above, the ADMM updates cost
+$\mathcal{O}(\sum_j K_j)$, and the certificate $\mathcal{O}(L|\mathscr{U}|)$. With the domains in parallel, the
+wall-clock cost of a solve is
 \begin{equation}
     C_{\mathrm{SENTINEL}}=\mathcal{O}\!\Bigl(T\,R_{\max}\bigl(I_{\mathrm{QAOA}}\,p\,N_{\mathrm{shot}}\max_k G_k
     +L|\mathscr{U}|\bigr)\Bigr).
     \label{eq:complexity}
 \end{equation}
-In the evaluation, a solve of a 20-UE network with $T=6$ and $R_{\max}=20$ took 1 to 7 seconds on the classical
-annealer and the orchestration loop used 34 to 223 seconds of solver time per 10-minute run, which is reported rather
-than assumed in the AoII figures through the overhead $\epsilon_i$ of Section~III-G. Exhaustive search over
-$\mathscr{P}_2$ costs $\mathcal{O}(L|\mathscr{U}|\prod_i|\mathscr{A}_i|)$, and branch-and-cut on $\mathscr{P}_3$ has
-the same worst case although it is fast on our instances; a centralized QAOA would need $\sum_k\hat N_k$ qubits on one
-device. The advantage of the decomposition is therefore the qubit count per device, not asymptotic time, and
-Section~VI reports at which size the inner sampler and the coordination each stop being exact.
+In the evaluation a 20-UE solve with $T=6$ and $R_{\max}=20$ took 1 to 7~s on the classical annealer, and the
+orchestration loop used 34 to 223~s of solver time per ten-minute run, which enters the AoII through the overhead
+$\epsilon_i$ of Section~III-G rather than being assumed away. Exhaustive search over $\mathscr{P}_2$ costs
+$\mathcal{O}(L|\mathscr{U}|\prod_i|\mathscr{A}_i|)$ and branch-and-cut on $\mathscr{P}_3$ has the same worst case
+although it is fast on our instances; a centralized QAOA would need $\sum_k\hat N_k$ qubits on one device. The
+advantage of the decomposition is the qubit count per device, not asymptotic time.

@@ -50,143 +50,119 @@ monitored process keeps evolving, and by the time the link is restored the edge 
 states rather than simply old. The age of information (AoI)~\cite{Kaul2012, Yates2021} measures only elapsed time and
 cannot tell these two situations apart. The age of incorrect information (AoII)~\cite{Maatouk2020, Maatouk2023} can:
 it is zero while the estimate is correct and grows with the duration and the magnitude of a mismatch. AoII has been
-analyzed mainly for one source and one monitor on a point-to-point channel. Carrying it to a network of edge nodes,
-satellites, and base stations raises two difficulties. The metric depends on the whole trajectory of the source since
-the estimate was last correct, so it does not fit the per-slot cost structure of the assignment problems used for
-SAGIN resource allocation. And the duration of a mismatch is governed by outages whose length is uncertain, so the
-allocation must be judged by its worst case over plausible disruptions, not by its average.
+analyzed mainly for one source and one monitor on a point-to-point channel. Carrying it to a network raises two
+difficulties: the metric depends on the whole trajectory of the source since the estimate was last correct, so it does
+not fit the per-slot cost structure of the assignment problems used for SAGIN resource allocation; and the duration
+of a mismatch is governed by outages of uncertain length, so an allocation must be judged by its worst case over
+plausible disruptions rather than by its average.
 
-We treat the problem as robust combinatorial optimization. The first step is a renewal-interval decomposition: a source
-that evolves as a Markov chain with known transition matrix accumulates, between two deliveries, an expected AoII that
-depends only on the length of the interval, and this quantity can be tabulated offline. The channel then enters the
-objective through a single number per scenario, the inter-delivery interval, and the resulting robust scheduling
-problem, VANGUARD, is a minimax assignment problem over binary variables. The second step concerns how such a problem
-can be given to a quantum solver. A direct encoding of the minimax, with an epigraph variable and one slack register
-per scenario, needs three to four auxiliary qubits for every decision qubit and a penalty landscape in which classical
-and quantum local search alike fail to find a feasible point; we document this failure in Section~VI. SENTINEL instead
-dualizes the minimax into scenario weights that a classical outer loop updates by exponentiated gradient, so that each
-inner subproblem has a linear objective and is encoded as a compact QUBO over the decision variables and a few
-capacity-slack bits. The one-hot constraint of each user is enforced by the XY mixer of the quantum circuit rather
-than by a penalty~\cite{Hadfield2019}, which keeps every sample a valid assignment. The network is partitioned into
-satellite-ground domains that are coordinated by the sharing form of ADMM~\cite{Boyd2011}, and each assembled schedule
-is evaluated exactly under every scenario, so the reported worst case is a certificate that does not rest on the
-solver's optimality.
+We treat the problem as robust combinatorial optimization. A renewal-interval decomposition shows that a Markov source
+with known transition matrix accumulates, between two deliveries, an expected AoII that depends only on the length of
+the interval and can be tabulated offline, so the channel enters the objective through a single number per scenario
+and the resulting robust scheduling problem, VANGUARD, is a minimax assignment problem over binary variables. The
+question is then how such a problem can be given to a quantum solver. A direct encoding of the minimax, with an
+epigraph variable and a slack register per scenario, needs three to four auxiliary qubits per decision qubit and a
+penalty landscape on which classical and quantum local search alike fail to find a feasible point; we document this
+in Section~VI. SENTINEL instead dualizes the minimax into scenario weights that a classical outer loop updates, so
+that each inner subproblem is linear and is encoded as a compact QUBO over the decision variables and a few
+capacity-slack bits; the one-hot constraint of each user is enforced by the XY mixer of the circuit rather than by a
+penalty~\cite{Hadfield2019}. Satellite-ground domains are coordinated by the sharing form of ADMM~\cite{Boyd2011},
+and every assembled schedule is evaluated exactly under every scenario, so the reported worst case is a certificate
+that does not rest on the solver's optimality.
 
-The third step is an evaluation that a reader can trust. Satellite passes are propagated from a Starlink
-two-line-element snapshot with SGP4~\cite{Vallado2006}; the large-scale channel follows the suburban tables of
-3GPP TR 38.811~\cite{TR38811}, including the elevation-dependent line-of-sight probability and clutter loss; every
-policy, including the baselines, receives acknowledgement feedback and may abandon a link that has failed for a fixed
-time; an integer linear program solved to optimality provides the reference for every solver; and all policies run on
-the same random episodes, so that comparisons are paired and are reported with signed-rank tests. The quantum step is
-run on two IBM Heron processors as well as in simulation.
-
-The results support a modest and precisely stated set of claims. Under real passes the worst-case certificate held in
-98.7\% of orchestration epochs, and its violations are non-line-of-sight passes whose clutter loss exceeds the
-scenario set. The robust schedule's certificate is 2 to 7\% lower than that of its nominal counterpart in 67 to 100\%
-of seeds, while the two are statistically indistinguishable in realized AoII, with and without failure feedback; the
-value of the scenario set is the guarantee, not a lower average. A per-slot policy that transmits whenever its
-observed AoII is positive is the strongest heuristic when feedback is available, and we show that it coincides with
-the Whittle-index scheduler of the restless-bandit literature~\cite{Whittle1988, Kadota2018} at the bandwidths of this
-study; SENTINEL combined with the same trigger comes within 10 to 20\% of it while keeping the certificate, and is 25 to
-30\% better than it at 15 to 20 users when feedback is removed. The compact formulation is exact through 25 users and
-within 12\% at 50 with four to five times fewer qubits than the epigraph encoding; its limit at 75 to 100 users is the
-coordination of shared satellites, not the inner solver. On hardware, thirteen domains of 8 to 38 qubits sampled on
-\texttt{ibm\_kingston} and \texttt{ibm\_fez} all decoded to the exact optimum, with the fraction of usable shots
-decreasing from 86\% to 2.6\% as the circuits grew; a trained proximal-policy-optimization agent, included because
-learning-based baselines are expected, matches the nominal schedule at five users and falls behind as its action
-space grows. On every instance that fits a current device, greedy association is already optimal, so the quantum step
-is a correct, hardware-runnable constrained sampler and not yet a better optimizer; the instances on which greedy
-loses need one to two hundred qubits per domain.
+The evaluation is built so that a reader can trust it: Starlink ephemerides propagated with SGP4~\cite{Vallado2006},
+the suburban channel of 3GPP TR 38.811~\cite{TR38811}, acknowledgement feedback for every policy, an exact
+integer-programming reference, common random episodes with paired tests, and runs of the quantum step on two IBM
+Heron processors. Its findings are modest and precisely stated. The worst-case certificate held in 98.7\% of
+orchestration epochs under real passes. The robust schedule's certificate is 2 to 7\% below that of its nominal
+counterpart in 67 to 100\% of seeds, while the two are statistically indistinguishable in realized AoII; the value of
+the scenario set is the guarantee, not a lower average. A per-slot policy that transmits whenever its observed AoII is
+positive is the strongest heuristic when feedback is available and coincides with the Whittle-index
+scheduler~\cite{Whittle1988, Kadota2018} at the bandwidths of this study; SENTINEL combined with the same trigger comes
+within 10 to 20\% of it while keeping the certificate, and is 25 to 30\% better than it at 15 to 20 users when feedback
+is removed. The compact formulation is exact through 25 users with four to five times fewer qubits than the epigraph
+encoding, and thirteen domains of 8 to 38 qubits sampled on \texttt{ibm\_kingston} and \texttt{ibm\_fez} all decoded
+to the exact optimum, with the fraction of usable shots falling from 86\% to 2.6\% as the circuits grew. On every
+instance that fits a current device, greedy association is already optimal, so the quantum step is a correct,
+hardware-runnable constrained sampler and not yet a better optimizer; we state the scale at which that would change.
 
 The contributions of this paper are the following.
 \begin{itemize}[leftmargin=13pt]
 \item The robust scheduling problem VANGUARD, which minimizes the worst-case time-average AoII of a network of
-monitored edge nodes over a scenario set of satellite shadowing and handover disruptions, jointly over update rates,
-association, and bandwidth, subject to capacity, visibility, rate, and AoII-budget constraints.
+monitored edge nodes over a set of satellite shadowing and handover scenarios, jointly over update rates,
+association, and bandwidth, under capacity, visibility, rate, and AoII-budget constraints.
 \item A renewal-interval decomposition that expresses the expected AoII accumulated between deliveries in closed form
-as a function of the interval length and the source's transition matrix, verified against Monte Carlo simulation to
-within one percent, which reconciles the history dependence of AoII with binary-variable optimization.
-\item SENTINEL, a distributed hybrid procedure in which the minimax is dualized into classically updated scenario
-weights, each domain's subproblem is a compact QUBO with XY-mixer-enforced one-hot structure, candidate pruning
-removes dominated combinations without changing the optimum, and the sharing form of ADMM with a warm start and a
-cost-scaled penalty coordinates the domains; together with a certificate of the worst-case AoII of every schedule.
-\item An evaluation under Starlink ephemerides and the TR 38.811 channel, against an exact integer-programming
-reference, with paired statistics over 30 to 60 seeds, baselines that include the Whittle-index scheduler and a
-trained learning agent, an ablation of failure feedback, sensitivity to the scenario set and to bandwidth, and runs of
-the quantum step on two superconducting processors, with the scale limit of the quantum step stated explicitly.
+and reconciles the history dependence of AoII with binary-variable optimization; verified against Monte Carlo
+simulation to within one percent.
+\item SENTINEL, a distributed hybrid procedure that dualizes the minimax into classically updated scenario weights,
+encodes each domain's subproblem as a compact QUBO with XY-mixer-enforced one-hot structure, prunes dominated
+candidates, and coordinates the domains by ADMM with a warm start and a cost-scaled penalty, with a certificate of
+the worst-case AoII of every schedule.
+\item An evaluation under Starlink ephemerides and the TR 38.811 channel against an exact reference, with paired
+statistics, Whittle-index and trained learning baselines, an ablation of failure feedback, sensitivity studies, and
+runs of the quantum step on two superconducting processors with its scale limit stated explicitly.
 \end{itemize}
 
-The remainder of the paper is organized as follows. Section~II reviews related work. Section~III presents the system
-model: the channel and satellite geometry, the monitored sources, the disruption scenarios, the renewal-interval
-decomposition, the binary decision model, and the orchestration architecture. Section~IV formulates VANGUARD and its
-binary reformulations. Section~V develops the dualized compact QUBO, the XY-mixer QAOA, and the ADMM coordination.
+Section~II reviews related work. Section~III presents the system model, Section~IV formulates VANGUARD and its
+binary reformulations, Section~V develops the dualized compact QUBO, the XY-mixer QAOA, and the ADMM coordination,
 Section~VI reports the evaluation, and Section~VII concludes.
 
+%=======================================================================
 %=======================================================================
 \section{State of the Art}
 %=======================================================================
 
-The paper touches five bodies of work: satellite-ground integrated edge computing, information freshness and
-correctness, robust resource allocation, learning-based scheduling, and quantum-assisted combinatorial optimization.
-We take them in turn and then state the gap.
-
 \subsubsection{Satellite-Ground Integrated Edge Computing}
 Mobile edge computing~\cite{Mao2017} has been extended beyond terrestrial coverage by placing edge servers on
-satellites and base stations~\cite{Liu2018, Kato2019, Zhang2019}. The literature is dominated by task offloading
-under deterministic or average channel assumptions~\cite{Cheng2019, Zhou2021}, with the completion delay of a task as
-the objective. The correctness of what the server believes about the monitored process has not been the quantity
-optimized. On the channel side, the 3GPP study on non-terrestrial networks~\cite{TR38811} provides
-elevation-dependent line-of-sight probabilities, clutter losses, and shadow-fading statistics for several
-environments, and the SGP4 propagator with public two-line elements~\cite{Vallado2006} gives pass geometry for any
-constellation; most SAGIN evaluations use neither, and we found that the choice matters, because with real passes the
-dominant disruptions are handovers and non-line-of-sight passes rather than coverage gaps.
+satellites and base stations~\cite{Liu2018, Kato2019, Zhang2019}, with task offloading under deterministic or
+average channel assumptions as the dominant problem~\cite{Cheng2019, Zhou2021} and completion delay as the objective.
+The correctness of what the server believes about the monitored process has not been the quantity optimized. On the
+channel side, the 3GPP study on non-terrestrial networks~\cite{TR38811} provides elevation-dependent line-of-sight
+probabilities, clutter losses, and shadow-fading statistics, and the SGP4 propagator with public two-line
+elements~\cite{Vallado2006} gives pass geometry for any constellation; most SAGIN evaluations use neither, and the
+choice matters, because with real passes the dominant disruptions are handovers and non-line-of-sight passes rather
+than coverage gaps.
 
 \subsubsection{Age of Information and Age of Incorrect Information}
-AoI has been studied extensively as a timeliness measure~\cite{Kaul2012, Kosta2017, Sun2017, Kadota2018, Yates2021}.
-It is content-agnostic. AoII~\cite{Maatouk2020} penalizes the duration and magnitude of estimation error and has been
-analyzed for a single source under threshold and semi-Markov policies~\cite{Maatouk2023, Kriouile2021} and over
-unreliable, power-constrained channels~\cite{Chen2021}. For scheduling several sources over shared channels the
-standard tool is the Whittle index of the restless bandit~\cite{Whittle1988}, applied to AoI by Kadota et
-al.~\cite{Kadota2018}; it remains the reference policy against which new AoII schedulers should be measured, and we
-include it. What is missing is a formulation in which association, bandwidth, and update rates are chosen jointly
-across heterogeneous serving nodes, under outages that span several source transitions, with a guarantee on the
-worst case.
+AoI is a widely studied but content-agnostic timeliness measure~\cite{Kaul2012, Kosta2017, Sun2017, Kadota2018,
+Yates2021}. AoII~\cite{Maatouk2020} penalizes the duration and magnitude of estimation error and has been analyzed
+for a single source under threshold and semi-Markov policies~\cite{Maatouk2023, Kriouile2021} and over unreliable,
+power-constrained channels~\cite{Chen2021}. For several sources over shared channels the standard tool is the Whittle
+index of the restless bandit~\cite{Whittle1988}, applied to AoI by Kadota et al.~\cite{Kadota2018}; it is the
+reference policy against which new AoII schedulers should be measured, and we include it. Missing is a formulation in
+which association, bandwidth, and update rates are chosen jointly across heterogeneous serving nodes, under outages
+that span several source transitions, with a guarantee on the worst case.
 
-\subsubsection{Robust Resource Allocation Under Link Uncertainty}
+\subsubsection{Robust Allocation and Learning-Based Scheduling}
 Robust optimization minimizes cost against the worst realization of an uncertain parameter in a bounded
-set~\cite{BenTal2009, Bertsimas2004}. When the uncertainty set is a finite list of scenarios, the minimax can be
-written as a maximization over scenario weights in the simplex, and the saddle point can be approached by
-multiplicative-weights or exponentiated-gradient updates on the weights~\cite{Arora2012}; this is the mechanism we use
-to keep the quantum subproblem linear. Robust allocation in satellite-ground edge computing has treated the
-uncertainty as a perturbation of rate or delay, not as the driver of estimation error.
-
-\subsubsection{Learning-Based Scheduling}
-Deep reinforcement learning~\cite{Mnih2015, Schulman2017} has been applied to AoI- and AoII-aware scheduling in
-point-to-point and small multi-user systems. It optimizes an expected return, needs training on representative
-disruption patterns, and provides no bound on the estimation error under disruptions outside its training
-distribution. These properties do not disqualify it as a baseline, and we train one with the same reward, feedback,
-and episodes as every other policy; they do explain why a certified worst case is a different kind of guarantee.
+set~\cite{BenTal2009, Bertsimas2004}. When the uncertainty set is a finite list of scenarios, the minimax is a
+maximization over scenario weights in the simplex, and the saddle point can be approached by multiplicative-weights
+updates~\cite{Arora2012}; this is the mechanism we use to keep the quantum subproblem linear. Robust allocation in
+satellite-ground edge computing has treated uncertainty as a perturbation of rate or delay, not as the driver of
+estimation error. Deep reinforcement learning~\cite{Mnih2015, Schulman2017} has been applied to AoI- and AoII-aware
+scheduling in small systems; it optimizes an expected return and gives no bound on the estimation error under
+disruptions outside its training distribution. That does not disqualify it as a baseline, and we train one with the
+same reward, feedback, and episodes as every other policy.
 
 \subsubsection{Quantum-Assisted Combinatorial Optimization}
-QUBO formulations~\cite{Lucas2014, Glover2019} solved by the quantum approximate optimization algorithm
-(QAOA)~\cite{Farhi2014, Cerezo2021} or by annealing~\cite{Albash2018} have been proposed for channel assignment and
-scheduling in wireless networks~\cite{Kim2019}. Two developments bear directly on constrained assignment problems.
-The alternating-operator form of QAOA~\cite{Hadfield2019} replaces the transverse-field mixer by one that preserves a
-constraint subspace, so that one-hot and cardinality constraints need no penalty terms; and the concentration of
-optimal QAOA parameters across instances~\cite{Brandao2018} allows angles optimized on a small instance to be reused
-on a larger one that cannot be simulated. On present devices, error suppression by dynamical
-decoupling~\cite{Viola1999} and randomized compiling~\cite{Wallman2016} is inexpensive, and we report its effect on our
-circuits. QAOA has not previously been applied to a freshness or correctness objective, and reports of its use for
-network resource allocation rarely state at what size the quantum sampler stops being competitive with a classical
-heuristic on the same instances.
+QUBO formulations~\cite{Lucas2014, Glover2019} solved by QAOA~\cite{Farhi2014, Cerezo2021} or by
+annealing~\cite{Albash2018} have been proposed for channel assignment and scheduling in wireless
+networks~\cite{Kim2019}. Two developments bear on constrained assignment: the alternating-operator form of
+QAOA~\cite{Hadfield2019} replaces the transverse-field mixer by one that preserves a constraint subspace, so one-hot
+constraints need no penalty terms, and the concentration of optimal QAOA parameters across instances~\cite{Brandao2018}
+allows angles optimized on a small instance to be reused on a larger one. Error suppression by dynamical
+decoupling~\cite{Viola1999} and randomized compiling~\cite{Wallman2016} is inexpensive on present devices, and we report
+its effect. QAOA has not been applied to a correctness objective, and reports of its use for network resource
+allocation rarely state at what size the quantum sampler stops being competitive with a classical heuristic.
 
 \subsubsection{Research Gap}
 No existing work formulates AoII as a robust minimax multi-node scheduling problem with joint association and
 resource allocation, targets information correctness rather than delay in robust SAGIN allocation, or applies
 quantum-assisted optimization to a correctness objective with an encoding that a current device can execute.
-SENTINEL addresses these three points, and its evaluation is designed so that the reader can see where each of its
-components helps and where it does not.
+SENTINEL addresses these three points, and its evaluation is designed so that the reader can see where each
+component helps and where it does not.
 
+%=======================================================================
 %=======================================================================
 \section{System Model}
 %=======================================================================
@@ -221,7 +197,7 @@ certifies every assembled network schedule by its exact worst-case AoII.
 \centering
 \caption{Key Notations}
 \label{tab:notation}
-\footnotesize
+\scriptsize
 \renewcommand{\arraystretch}{1.15}
 \begin{tabular}{|p{0.27\columnwidth}|p{0.61\columnwidth}|}
 \hline
@@ -286,45 +262,40 @@ $z_{jk}$, $u_{jk}$, $\varrho$ & ADMM bandwidth target, scaled dual, penalty \\
 
 \subsection{Satellite Geometry and Communications Model}
 
-Satellite positions are obtained from a constellation ephemeris. In the evaluation we propagate a public two-line
-element set with SGP4~\cite{Vallado2006}, but the model only requires, for every SAT $s_j$ and UE $u_i$, the slant
-range $d^{us}_{ij}(t)$ and the elevation angle $V_{ij}(t)$ in each slot. A SAT can serve $u_i$ in slot $t$ only if
-$V_{ij}(t)\geq\Theta$. Each UE is served by the SAT that it has been handed to and keeps that SAT until it sets below
-$\Theta$, at which point the UE is handed over to the SAT with the highest elevation; a dense constellation therefore
-produces a sequence of passes of several minutes each, separated by handover interruptions, and no coverage gaps at
-the elevation masks considered here.
+Satellite positions are obtained from a constellation ephemeris; the evaluation propagates a public two-line element
+set with SGP4~\cite{Vallado2006}, but the model only requires, for every SAT $s_j$ and UE $u_i$, the slant range
+$d^{us}_{ij}(t)$ and the elevation $V_{ij}(t)$ in each slot. A SAT can serve $u_i$ in slot $t$ only if
+$V_{ij}(t)\geq\Theta$. A UE keeps its serving SAT until it sets below $\Theta$ and is then handed over to the SAT
+with the highest elevation, so a dense constellation yields passes of several minutes separated by handover
+interruptions and no coverage gaps at the masks considered here.
 
 The nominal path loss (in dB) between $u_i$ and $s_j$ is
 \begin{equation}
     \varphi^{us}_{ij}=\varsigma^{us}+\zeta^{us}\log_{10}\!\left(f_{c}^{us}\right)
     +\xi^{us}\log_{10}\!\left(d^{us}_{ij}\right)+\lambda^{\mathrm{atm}}(V_{ij}),
 \end{equation}
-where $f_c^{us}$ is the carrier frequency, $\varsigma^{us}$, $\zeta^{us}$, and $\xi^{us}$ are the reference loss and
-the frequency and distance exponents of free-space propagation, and $\lambda^{\mathrm{atm}}(V)$ is the atmospheric
-absorption, which scales with $1/\sin V$. The UE-BS path loss $\varphi^{ub}_{in}$ uses the ground distance $d^{ub}_{in}$
-and a terrestrial exponent $\xi^{ub}>2$ with a fixed margin. The received power at the SAT is
-$p_i+G^{u}+G^{s}-\varphi^{us}_{ij}$ in dBm, where $p_i$ is the UE transmit power and $G^{u}$ and $G^{s}$ are the
-antenna gains of the UE terminal and the satellite; the BS link uses $G^{b}$ in place of $G^{s}$ and the UE's sub-6-GHz
-gain. The nominal uplink rate from $u_i$ to $s_j$ with bandwidth $\beta^{us}_{ij}$ is
+with carrier frequency $f_c^{us}$, the reference loss and exponents $\varsigma^{us}$, $\zeta^{us}$, $\xi^{us}$ of
+free-space propagation, and the atmospheric absorption $\lambda^{\mathrm{atm}}(V)\propto 1/\sin V$. The UE-BS path
+loss $\varphi^{ub}_{in}$ uses the ground distance $d^{ub}_{in}$, a terrestrial exponent $\xi^{ub}>2$, and a fixed
+margin. With transmit power $p_i$ and antenna gains $G^{u}$ and $G^{s}$ at the terminal and the satellite, the nominal
+uplink rate with bandwidth $\beta^{us}_{ij}$ is
 \begin{equation}
     R^{us}_{ij}=\beta_{ij}^{us}\,\min\!\left\{\log_{2}\!\left(1+
     \frac{10^{(p_{i}+G^{u}+G^{s}-\varphi^{us}_{ij})/10}}{N_0\,\beta^{us}_{ij}\,F^{s}}\right),\ \bar{\gamma}\right\},
     \label{eq:rate_us}
 \end{equation}
 where $N_0$ is the noise power spectral density, $F^{s}$ the receiver noise figure, and $\bar\gamma$ the spectral
-efficiency of the highest modulation and coding scheme. The UE-BS rate $R^{ub}_{in}$ is defined in the same way. Each
-serving node divides its bandwidth among the UEs it serves, so the rate of a link does not depend on the association
-decisions of other UEs once the bandwidth level is fixed. We treat co-channel interference as absorbed in the noise
-figure and do not model residual Doppler, which the NTN frequency pre-compensation removes to within the subcarrier
-spacing.
+efficiency of the highest modulation and coding scheme; $R^{ub}_{in}$ is defined in the same way with $G^{b}$. Each
+node divides its bandwidth among the UEs it serves, so a link's rate does not depend on other UEs' association once
+the bandwidth level is fixed. Co-channel interference is absorbed in the noise figure, and residual Doppler, which
+the NTN frequency pre-compensation removes to within the subcarrier spacing, is not modelled.
 
-\emph{Large-scale channel.} On top of the nominal loss, each satellite link carries a large-scale state drawn once per
-pass from the TR 38.811 model~\cite{TR38811}: with the elevation-dependent probability $p_{\mathrm{LOS}}(V)$ of the
-chosen environment the pass is in line of sight; otherwise it is in non-line-of-sight and carries the clutter loss
-$\lambda^{\mathrm{cl}}(V)$ of the carrier band, which at Ku band and suburban elevations is 17 to 25 dB. A shadow-fading
-term with the state-dependent standard deviation $\sigma_{\mathrm{sf}}(V)$ is drawn per pass, and a small-scale fading
-term per slot. In the suburban environment used in Section~VI roughly one pass segment in twenty is in
-non-line-of-sight, and such a pass blocks the link for its whole duration at any bandwidth level.
+\emph{Large-scale channel.} Each satellite link also carries a large-scale state drawn once per pass from the
+TR 38.811 model~\cite{TR38811}: with the elevation-dependent probability $p_{\mathrm{LOS}}(V)$ the pass is in line of
+sight; otherwise it carries the clutter loss $\lambda^{\mathrm{cl}}(V)$ of the band, 17 to 25~dB at Ku band and
+suburban elevations. A shadow-fading term with the state-dependent deviation $\sigma_{\mathrm{sf}}(V)$ is drawn per
+pass and a small-scale fading term per slot. In the suburban environment of Section~VI about one pass segment in
+twenty is in non-line-of-sight, and such a pass blocks the link for its whole duration at any bandwidth level.
 
 \subsection{Monitored Source and Estimation Model}
 
@@ -351,36 +322,27 @@ after a delivery if the process leaves the delivered state.
 
 \subsection{Disruption Scenarios}
 
-The orchestrator plans against a finite scenario set $\mathscr{L}=\{1,\ldots,L\}$, each scenario $\ell$ specifying an
-additional loss $\delta^{us}_{ij}(\ell)$ on every UE-SAT link and a window length $T^{\mathrm{dis}}(\ell)$, in slots,
-over which it applies:
+The orchestrator plans against a finite scenario set $\mathscr{L}=\{1,\ldots,L\}$. Scenario $\ell$ adds a loss
+$\delta^{us}_{ij}(\ell)$ to every UE-SAT link for a window of $T^{\mathrm{dis}}(\ell)$ slots,
 \begin{equation}
-    \tilde{\varphi}^{us}_{ij}(\ell)=\varphi^{us}_{ij}+\delta^{us}_{ij}(\ell).
+    \tilde{\varphi}^{us}_{ij}(\ell)=\varphi^{us}_{ij}+\delta^{us}_{ij}(\ell),
     \label{eq:realized_pathloss}
 \end{equation}
-The scenario rate $R^{us}_{ij}(\ell)$ follows from~\eqref{eq:rate_us} with $\tilde{\varphi}^{us}_{ij}(\ell)$ in place
-of $\varphi^{us}_{ij}$, and an update sampled in slot $t$ is delivered under scenario $\ell$ only if
-$R^{us}_{ij}(\ell)\,T_s\geq D_i$ and $V_{ij}(t)\geq\Theta$, where $D_i$ is the size of an update in bits. BS links are
-terrestrial and unaffected.
+the scenario rate $R^{us}_{ij}(\ell)$ follows from~\eqref{eq:rate_us}, and an update sampled in slot $t$ is delivered
+under scenario $\ell$ only if $R^{us}_{ij}(\ell)\,T_s\geq D_i$ and $V_{ij}(t)\geq\Theta$, where $D_i$ is the update
+size in bits. BS links are unaffected. We use five scenarios: the nominal channel; a deep shadowing event in which
+every satellite link loses $\sigma_{\mathrm{sf}}$ of the non-line-of-sight state, 12~dB in the suburban tables, for a
+window of $T^{\mathrm{dis}}$ slots; the handover interruption of each individual satellite, a complete outage of that
+link for the duration of a handover; and the joint outage of all satellites for the deep-shadowing window. An earlier
+version of the set also contained a mild 6~dB scenario; the sensitivity study of Section~VI shows that it never binds,
+and that the certificate and the hedging behaviour of the robust schedule appear only once the handover of the
+second shared satellite is in the set, which is why the handover scenarios are kept per satellite.
 
-We use five scenarios. The first is the nominal channel. The second is a deep shadowing event in which every
-satellite link loses $\sigma_{\mathrm{sf}}$ of the non-line-of-sight state, 12 dB in the suburban tables, for a window
-of $T^{\mathrm{dis}}$ slots; it stands for the shadow fading of a pass that enters non-line-of-sight. The third and
-fourth are the handover interruption of each individual satellite, a complete outage of that link for the duration
-of a handover; and the fifth is the joint outage of all satellites for the deep-shadowing window, the global worst
-case. An earlier version of the set also contained a mild 6 dB shadowing scenario. The sensitivity study of
-Section~VI shows that it never binds: with the antenna gains of Table~I the satellite links keep a margin above the
-delivery threshold at 6 dB, so no schedule changes when that scenario is added or removed, and we omit it. The study
-also shows that the certified worst case and the hedging behaviour of the robust schedule appear only once the
-handover of the second shared satellite is in the set, which is why the handover scenarios are kept per satellite
-rather than merged.
-
-In an offloading model a scenario perturbs the rate. Here it also determines the length of the outage window and
-therefore the inter-delivery interval $Y_{i,\kappa}(\ell)$, the number of slots from $t_{i,\kappa}$ until the next slot
-in which $g_i(t)=1$ and the delivery condition holds. A longer window lets $X_i(t)$ pass through more states before
-the next delivery. The scenario set is the planner's model of the disruption process; the simulator of Section~VI
-draws its disruptions from the TR 38.811 state process and the ephemeris, and the agreement between the two is what
-the certificate's validity measures.
+A scenario thus determines the length of the outage window and therefore the inter-delivery interval
+$Y_{i,\kappa}(\ell)$, the number of slots from $t_{i,\kappa}$ until the next slot in which $g_i(t)=1$ and the delivery
+condition holds; a longer window lets $X_i(t)$ pass through more states. The scenario set is the planner's model of
+the disruption process, whereas the simulator of Section~VI draws its disruptions from the TR 38.811 state process
+and the ephemeris; the agreement between the two is what the certificate's validity measures.
 
 \subsection{Renewal-Interval AoII Decomposition}
 
@@ -449,13 +411,12 @@ never changed the optimum and reduced the qubit count by a further factor of two
 
 \subsection{Delivery Feedback and Link-Failure Handling}
 
-A serving node acknowledges each delivered update, so a UE knows at the end of a slot whether its transmission
-succeeded. A UE whose transmissions to a node have failed in every slot of a window of $T^{\mathrm{f}}$ slots declares
-the link failed and avoids that node for $T^{\mathrm{b}}$ slots or, for a satellite, until its next handover; its
-controller is informed and re-solves the domain problem without the failed link at the next orchestration interval.
-This rule is applied uniformly to every policy in Section~VI, because any state-aware baseline needs the same
-information to be competitive, and because the value of a robust schedule depends on whether such feedback exists.
-Both regimes are reported.
+A serving node acknowledges each delivered update. A UE whose transmissions to a node have failed in every slot of a
+window of $T^{\mathrm{f}}$ slots declares the link failed and avoids that node for $T^{\mathrm{b}}$ slots or, for a
+satellite, until its next handover; its controller re-solves the domain problem without that link at the next
+orchestration interval. The rule applies to every policy in Section~VI, because any state-aware baseline needs the
+same information to be competitive and because the value of a robust schedule depends on whether such feedback
+exists; both regimes are reported.
 
 \subsection{Distributed Orchestration Model}
 
@@ -464,13 +425,12 @@ Each domain $\mathcal{D}_k$ holds the local decision vector $\mathbf{x}_k=\{x_{i
 \mathbf{B}_k,\mathbf{E}_k,\boldsymbol{\Xi}_k]$, with $\boldsymbol{\Psi}_k$ the tabulated AoII costs of its UEs,
 $\mathbf{V}_k$ the elevations, $\mathbf{X}_k$ the transition matrices and budgets, $\mathbf{B}_k$ the bandwidth levels,
 $\mathbf{E}_k$ the ephemeris over the decision interval, and $\boldsymbol{\Xi}_k$ the scenario set restricted to the
-domain. The controller re-solves its problem whenever a satellite becomes visible or sets, when a link failure is
-reported, and in any case at a fixed re-solve period. Within one solve, a classical outer loop maintains scenario
-weights, each domain solves a linear assignment subproblem on a quantum sampler, and the coordinator runs the sharing
-form of ADMM on the bandwidth of shared satellites and evaluates the worst-case AoII of each assembled schedule
-exactly. The orchestration latency, the time from the start of a solve until its schedule is in force, extends every
-inter-delivery interval by $\epsilon_i$ slots and enters the cost through $\Psi_i(Y_i(\ell)+\epsilon_i)$; in the
-evaluation the solve time is measured and reported rather than assumed.
+domain. The controller re-solves whenever a satellite becomes visible or sets, when a link failure is reported, and
+at least once per re-solve period. Within a solve, a classical outer loop maintains scenario weights, each domain
+solves a linear assignment subproblem on a quantum sampler, and the coordinator runs the sharing form of ADMM on the
+shared satellites' bandwidth and evaluates the worst-case AoII of each assembled schedule exactly. The orchestration
+latency extends every inter-delivery interval by $\epsilon_i$ slots and enters the cost through
+$\Psi_i(Y_i(\ell)+\epsilon_i)$; in the evaluation it is measured, not assumed.
 
 %=======================================================================
 \section{Problem Formulation}
