@@ -1,0 +1,99 @@
+% Figure 1 (system model), black and white, drawn at IEEE column width (3.5 in) so that no scaling is needed.
+% Build: pdflatex system_model.tex  (or scripts/draw_system_model.py). Icons: Font Awesome 5 Free (fontawesome5).
+\documentclass[tikz,border=1pt]{standalone}
+\usepackage{mathptmx}
+\usepackage{amsmath,amssymb,mathrsfs}
+\usepackage{fontawesome5}
+\usetikzlibrary{arrows.meta,calc,positioning}
+\begin{document}
+\begin{tikzpicture}[x=1cm,y=1cm,
+  every node/.style={font=\scriptsize, inner sep=1pt},
+  lnk/.style={-{Latex[length=1.6mm,width=1.2mm]}, line width=0.6pt},
+  bslink/.style={lnk},
+  satlink/.style={lnk, dashed},
+  blocked/.style={lnk, dash dot, black!60},
+  ack/.style={-{Latex[length=1.2mm,width=0.9mm]}, line width=0.4pt, dotted},
+  coordlink/.style={{Latex[length=1.3mm,width=1.0mm]}-{Latex[length=1.3mm,width=1.0mm]}, line width=0.5pt},
+  motion/.style={-{Latex[length=1.2mm,width=0.9mm]}, line width=0.5pt, dotted},
+  dom/.style={draw=black!65, dashed, rounded corners=3pt, fill=black!4, line width=0.5pt},
+  box/.style={draw, rounded corners=2pt, fill=black!10, line width=0.6pt, align=center},
+  icon/.style={inner sep=0pt},
+  st/.style={draw, circle, minimum size=1.8mm, inner sep=0pt, line width=0.4pt, fill=white},
+  stlink/.style={-{Latex[length=0.8mm,width=0.7mm]}, line width=0.35pt},
+]
+\useasboundingbox (0,0) rectangle (8.85,6.0);
+
+% ---------------- domains ----------------
+\draw[dom] (0.05,0.45) rectangle (4.25,3.0);
+\draw[dom] (4.6,0.45) rectangle (8.8,3.0);
+\node[fill=black!4, font=\footnotesize] at (1.15,3.0) {Domain $\mathcal{D}_1$};
+\node[fill=black!4, font=\footnotesize] at (7.2,3.0) {Domain $\mathcal{D}_2$};
+\node[anchor=north east, align=right] (c1) at (4.15,2.88) {\faMicrochip\ domain controller\\ compact QUBO, XY-QAOA};
+\node[anchor=north west, align=left] (c2) at (4.7,2.88) {\faMicrochip\ domain controller\\ compact QUBO, XY-QAOA};
+
+% ---------------- base stations, each with an edge server ----------------
+\node[icon, font=\fontsize{19}{19}\selectfont] (b1) at (2.0,1.68) {\faBroadcastTower};
+\node[font=\footnotesize, above=0pt of b1] {BS $b_1$};
+\node[icon, font=\fontsize{8}{8}\selectfont] at (2.0,1.2) {\faServer};
+\node[icon, font=\fontsize{19}{19}\selectfont] (b2) at (5.5,1.68) {\faBroadcastTower};
+\node[font=\footnotesize, above=0pt of b2] {BS $b_2$};
+\node[icon, font=\fontsize{8}{8}\selectfont] at (5.5,1.2) {\faServer};
+
+% ---------------- UEs and the monitored processes ----------------
+\newcommand{\source}[3]{% x y name : three-state chain of the monitored process
+  \node[st] (#3a) at (#1-0.3,#2) {};
+  \node[st] (#3b) at (#1,#2) {};
+  \node[st] (#3c) at (#1+0.3,#2) {};
+  \draw[stlink] (#3a) -- (#3b);
+  \draw[stlink] (#3b) -- (#3c);
+  \draw[stlink] (#3c.south) to[bend left=65] (#3a.south);
+}
+\newcommand{\ue}[4]{% x y index chain-x : UE icon, its label above, its process below
+  \node[icon, font=\fontsize{11}{11}\selectfont] (u#3) at (#1,#2) {\faIcon{mobile-alt}};
+  \node[above=0pt of u#3] (l#3) {$u_#3$};
+  \source{#4}{0.82}{p#3}
+  \node[above=0pt of p#3b, yshift=1pt] {$X_#3(t)$};
+}
+\ue{3.45}{1.58}{1}{3.45}
+\ue{0.6}{1.58}{2}{0.9}
+\ue{6.9}{1.58}{3}{6.9}
+\ue{8.3}{1.58}{4}{7.95}
+
+% ---------------- satellites, each with an edge server ----------------
+\node[icon, font=\fontsize{17}{17}\selectfont] (s1) at (1.35,5.3) {\faSatellite};
+\node[font=\footnotesize, above=1pt of s1] {SAT $s_1$ (setting)};
+\node[icon, font=\fontsize{8}{8}\selectfont] at (1.95,4.88) {\faServer};
+\draw[motion] ($(s1.west)+(-0.1,0.05)$) -- ++(-0.6,-0.2);
+\node[icon, font=\fontsize{17}{17}\selectfont] (s2) at (7.45,5.3) {\faSatellite};
+\node[font=\footnotesize, above=1pt of s2] {SAT $s_2$ (rising)};
+\node[icon, font=\fontsize{8}{8}\selectfont] at (6.85,4.88) {\faServer};
+\draw[motion] ($(s2.east)+(0.1,0.05)$) -- ++(0.6,0.2);
+\draw[coordlink] ($(s1.east)+(0.15,0)$) -- ($(s2.west)+(-0.15,0)$) node[midway, above=1pt] {handover};
+
+% ---------------- classical coordinator ----------------
+\node[box, text width=3.55cm] (co) at (4.4,3.95)
+  {{\footnotesize\textbf{Classical coordinator}}\\[1pt]
+   scenario weights $\mathbf{w}$, ADMM targets $z_{jk}$,\\ worst-case certificate $\eta$};
+\draw[coordlink] ($(c1.north)+(-0.3,0.08)$) -- ($(co.south west)+(0.35,0)$);
+\draw[coordlink] ($(c2.north)+(0.3,0.08)$) -- ($(co.south east)+(-0.35,0)$);
+
+% ---------------- links ----------------
+\draw[bslink] (u1.west) -- ($(b1.east)+(0.05,0)$);
+\draw[ack] ($(b1.east)+(0.05,-0.22)$) -- ($(u1.west)+(0,-0.22)$) node[midway, below=0pt] {ACK};
+\draw[bslink] (u3.west) -- ($(b2.east)+(0.05,0)$);
+\draw[ack] ($(b2.east)+(0.05,-0.22)$) -- ($(u3.west)+(0,-0.22)$) node[midway, below=0pt] {ACK};
+\draw[satlink] (l2.north) -- ($(s1.south)+(-0.1,-0.1)$);
+\draw[blocked] (l4.north) -- ($(s2.south)+(0.15,-0.1)$);
+% obstacle on the blocked path and the blocking marker
+\node[icon, font=\fontsize{20}{20}\selectfont, fill=white, inner sep=0.5pt] at (8.02,3.42) {\faBuilding};
+\node[draw, circle, fill=white, inner sep=0.2pt, line width=0.5pt, font=\scriptsize\bfseries] at (7.79,4.2) {$\times$};
+\node[align=right, anchor=east] at (7.6,3.5) {NLOS pass\\ (blocked)};
+
+% ---------------- legend ----------------
+\node[anchor=south, align=center, font=\scriptsize] at (4.4,0.04)
+  {\tikz{\draw[bslink] (0,0)--(0.45,0);}\ BS link\qquad
+   \tikz{\draw[satlink] (0,0)--(0.45,0);}\ SAT link\qquad
+   \tikz{\draw[blocked] (0,0)--(0.45,0);}\ blocked SAT link\qquad
+   \faServer\ edge server};
+\end{tikzpicture}
+\end{document}
