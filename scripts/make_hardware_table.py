@@ -6,7 +6,8 @@ visible), and per run the feasible-shot fraction, the probability of the optimum
 probability of the optimum under uniform sampling of that run's feasible one-hot set. The product of the first two is
 the probability that a single shot is an optimal assignment (p_optimal_shot in runs.csv). The uniform baseline is
 listed per run because every run re-solves the scenario weights, so the optimal set of a domain can differ between its
-greedy-start and W-state runs (it does on the two seed-2 domains).
+greedy-start and W-state runs (it does on the two seed-2 domains). For each domain the W-state run on the same
+processor as the greedy-start run is used when one exists; the caption names the exceptions.
 """
 from pathlib import Path
 
@@ -33,6 +34,10 @@ def gates(row):
     return str(int(row["two_qubit_gates"])) if row is not None else "--"
 
 
+def tt(backend):
+    return "\\texttt{" + str(backend).replace("_", "\\_") + "}"
+
+
 def main():
     df = pd.read_csv(ROOT / "results" / "hardware" / "runs.csv")
     dev = df[(df["mode"] == "device") & (df["mitigation"].fillna("none") == "none")].copy()
@@ -51,11 +56,21 @@ def main():
             print(f"W-state row for {ues} UEs seed {seed} domain {dom}: {w_row['backend']} (greedy on {a['backend']})")
         rows.append((ues, seed, dom, a, gr.iloc[0] if len(gr) else None, w_row))
     rows.sort(key=lambda r: (r[0], r[1], r[2]))
+
+    # W-state runs that had to be taken from another processor than the greedy-start run of the same domain.
+    exceptions = {}
+    for ues, seed, dom, a, gr, wr in rows:
+        if gr is not None and wr is not None and wr["backend"] != gr["backend"]:
+            exceptions.setdefault(f"U{ues} s{seed}", wr["backend"])
+    w_note = "$W$-state start on the same processor"
+    if exceptions:
+        w_note += ", except " + ", ".join(f"{k} ({tt(b)})" for k, b in exceptions.items())
+    caption = ("Device Sampling Results on IBM Heron Processors (greedy start: \\texttt{ibm\\_kingston}, seeds 6 and 7 on "
+               "\\texttt{ibm\\_fez}; " + w_note + "; U: number of UEs, s: seed, d: domain; uniform baseline per run)")
+
     lines = [
         "\\begin{table}[!t]", "\\centering",
-        "\\caption{Device Sampling Results on IBM Heron Processors (greedy start: \\texttt{ibm\\_kingston}, seeds 6 and 7 on "
-        "\\texttt{ibm\\_fez}; $W$-state start: \\texttt{ibm\\_fez}; U: number of UEs, s: seed, d: domain; uniform baseline "
-        "per run)}",
+        "\\caption{" + caption + "}",
         "\\label{tab:hardware}", "\\scriptsize",
         "\\setlength{\\tabcolsep}{2.5pt}",
         "\\resizebox{\\columnwidth}{!}{%",

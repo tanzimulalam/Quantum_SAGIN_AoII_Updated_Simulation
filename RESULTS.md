@@ -503,13 +503,24 @@ device result is retention of the warm start under noise, not a search. W-state 
 ### W-state (no warm start) device runs, ibm_fez, 1 November 2026 (`scripts/device_batch_wstate_fez.sh`)
 
 Same domains, angles optimized from the W state on the simulator, 4096 shots, no error suppression. Feasible-shot
-fraction 16 to 66% on the 6-UE domains (the W-state preparation ladder deepens the circuits) and 1.4% at 38 qubits.
+fraction 16 to 66% on the 6-UE domains (ibm_fez is the noisier of the two processors for these circuits; the ibm_kingston replicate below shows the same fractions as the greedy-start circuits) and 1.4% at 38 qubits.
 P(optimal | feasible shot) 0.04 to 0.33 against the uniform baseline of the same run, 0.06 to 0.25 (each run re-solves the scenario weights, and on the two seed-2 domains the W run's optimal set differs from the greedy run's: uniform 0.125 against 0.031 and 0.016; the device table lists the baseline per run; ratio to uniform 0.53 to 2.04 across
 the twelve 6-UE domains); mean approximation ratio of feasible shots within +0.00 to +0.05 of the uniform value;
 P(optimal shot) 0.006 to 0.22. At 38 qubits no feasible shot was optimal (uniform 0.006). Every decoded network
 schedule still attained the ILP optimum (the 38-qubit run's best domain sample was suboptimal for the domain but
 tied at the network worst case). Conclusion written into Section VI-E: at depth 1 on hardware the W-state sampler is a
 uniform sampler of the feasible set; the greedy-start results are retention of an already-optimal warm start; the
-schedule optimum is reached because the decoder keeps the best of thousands of shots over small feasible sets. The
-ibm_kingston copies of the same jobs were queued at the time of writing (`scripts/device_batch_wstate.sh`,
-`device_batch_wstate_parallel.sh`); `make_hardware_table.py` prefers a same-device W-state row when one exists.
+schedule optimum is reached because the decoder keeps the best of thousands of shots over small feasible sets. The ibm_kingston copies of the same jobs are reported in the next subsection.
+
+### W-state device runs replicated on ibm_kingston, 1 November 2026 (`scripts/device_batch_wstate_parallel.sh`)
+
+The same W-state jobs on ibm_kingston, the processor of the greedy-start runs for seeds 1 to 5 and the 10-UE instance,
+completed for seeds 2, 3, 5, 6, 7 and the 10-UE instance after about ten hours in the queue (seed 1 still queued at the
+time of writing). Feasible-shot fraction 34 to 81% on the 6-UE domains and 3.5% at 38 qubits, the same as the
+greedy-start circuits on the same processor despite 13 to 113 more two-qubit gates for the W-state preparation, so the
+lower ibm_fez fractions above are a device effect, not a depth effect. P(optimal | feasible shot) 0.03 to 0.37 against
+uniform 0.06 to 0.25 (ratio 0.51 to 2.26); mean approximation ratio of feasible shots within +0.00 to +0.04 of the
+uniform value; at 38 qubits no feasible shot was optimal (approximation ratio 0.82 against 0.79 uniform). Every decoded
+schedule attained the ILP optimum. The paper's device table pairs each greedy-start run with the W-state run on the
+same processor (ibm_kingston for seeds 2, 3, 5 and the 10-UE instance; ibm_fez for seeds 6 and 7; ibm_fez for seed 1
+until its ibm_kingston copy completes), and Section VI-E quotes the ranges of that pairing.
