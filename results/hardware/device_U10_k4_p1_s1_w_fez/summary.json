@@ -1,0 +1,60 @@
+{
+  "mode": "device",
+  "backend": "ibm_fez",
+  "ues": 10,
+  "k_cand": 4,
+  "depth": 1,
+  "shots": 4096,
+  "ilp_eta": 2.8079709874663803,
+  "sim_compact_qaoa_eta": 2.8079709874663803,
+  "max_sim_qubits": 26,
+  "mitigation": "none",
+  "init": "w",
+  "dual_solver": "sa_xy",
+  "sat_bw_mhz": null,
+  "bs_bw_mhz": null,
+  "domains": [
+    {
+      "domain": 0,
+      "n_qubits": 38,
+      "decision_qubits": 34,
+      "two_qubit_gates": 719,
+      "transpiled_depth": 700,
+      "sim_feasible_sample_fraction": NaN,
+      "sim_best_energy": 2.176762086873306,
+      "greedy_energy": 2.176762086873306,
+      "estimated_qpu_s_upper": 8.192,
+      "params": [
+        0.7582717075959424,
+        0.7651701269539045
+      ],
+      "param_names": [
+        "b0",
+        "g0"
+      ],
+      "params_source": "transferred from domain 1",
+      "hw_onehot_sample_fraction": 0.015869140625,
+      "hw_feasible_sample_fraction": 0.013671875,
+      "hw_best_energy": 2.1787620593465107,
+      "hw_mean_qubo_energy": 10.983841114715448,
+      "hw_matches_sim_best": false,
+      "onehot_states": 55296,
+      "feasible_states": 52736,
+      "optimal_states": 320,
+      "exact_domain_optimum": 2.176762086873306,
+      "p_uniform_optimal": 0.006067961165048544,
+      "uniform_approx_ratio": 0.7900896663420524,
+      "energy_spread_rel": 0.8197635164108653,
+      "best_equals_exact_optimum": false,
+      "p_optimal_shot": 0.0,
+      "p_optimal_given_feasible": 0.0,
+      "approx_ratio_feasible": 0.8015992617653241
+    }
+  ],
+  "job_id": "dbjft4l6p51s73ckoatg",
+  "usage_s": 0,
+  "sampling_wall_s": 8215.364151239395,
+  "hw_schedule_eta": 2.8079709874663803,
+  "hw_schedule_feasible": true,
+  "hw_gap_pct_vs_ilp": 0.0
+}

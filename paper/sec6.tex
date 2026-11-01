@@ -3,7 +3,7 @@
 \label{sec:performance}
 %=======================================================================
 
-We evaluate SENTINEL with the simulator released with this paper\footnote{\url{https://github.com/tanzimulalam/Quantum_SAGIN_AoII_Updated_Simulation}, tag \texttt{v2.2-manuscript}; the script \texttt{scripts/reproduce\_all.sh} regenerates every table and figure.}
+We evaluate SENTINEL with the simulator released with this paper\footnote{\url{https://github.com/tanzimulalam/Quantum_SAGIN_AoII_Updated_Simulation}, tag \texttt{v2.3-manuscript}; the script \texttt{scripts/reproduce\_all.sh} regenerates every table and figure.}
 under the parameters of Table~\ref{tab:simulation_parameters}, which are the values used for every figure. Each
 configuration runs for 60{,}000 slots of 10~ms, ten minutes of network time, on 30 independent seeds; the policies of
 one seed share its topology, source trajectories, fading, and disruption realization, so all comparisons are paired.
@@ -271,8 +271,7 @@ the final sampling circuit of one or two domains; the 38-qubit domain exceeds th
 the angles of the largest simulated domain of its run, relying on parameter concentration~\cite{Brandao2018}. Two
 statistics are reported per domain against the baseline of uniform sampling of the domain's feasible one-hot set,
 which we enumerate: the probability that a single shot is an optimal assignment, and the
-probability of the optimum among the feasible shots. The energy spread of the feasible set (worst feasible cost over
-the optimum, minus one) is listed because several hardware-sized domains are nearly flat: where it is below 2\%, any
+probability of the optimum among the feasible shots. The energy spread of the feasible set is listed because several hardware-sized domains are nearly flat: where it is below 2\%, any
 feasible assignment is within 2\% of the optimum and the sampler only has to achieve feasibility; on the other domains
 it is 35 to 307\%, and uniform sampling reaches an approximation ratio of only 0.62 to 0.91.
 
@@ -285,7 +284,13 @@ warm start under noise, not a search, and we state it that way. Second, at 38 qu
 optimum, 0.6\%, equals the uniform baseline: noise destroys 97\% of the shots, and only among the surviving feasible
 shots does the warm start still show (24\% optimal against 0.6\%). The best feasible sample equalled the exact optimum
 of its domain in every run and every decoded schedule attained the ILP optimum of its instance, but at 38 qubits this
-is what 4096 uniform feasible samples would also achieve. Third, from the $W$ state, with no warm start, WSTATE-TEXT
+is what 4096 uniform feasible samples would also achieve. Third, from the $W$ state, with no warm start (run on \texttt{ibm\_fez}), the device is a uniform sampler of the
+feasible set: the probability of the optimum among feasible shots is 0.04 to 0.33 against the uniform 0.016 to 0.25,
+within a factor of 0.5 to 2 of it on every 6-UE domain, and the approximation ratio of feasible shots exceeds the
+uniform value by at most 0.04; at 38 qubits no feasible shot was optimal. The 1.3-fold concentration of one
+noiseless layer is lost to hardware noise. Every decoded schedule still attained the ILP optimum of its instance
+(at 38 qubits the best domain sample was suboptimal but tied at the network worst case), because the feasible sets
+are small and the decoder keeps the best of thousands of shots.
 
 The feasible-shot fraction measures the noise: 60 to 86\% at 8 to 18 qubits with up to 142 two-qubit gates, 35 to 43\%
 at 20 to 24 qubits with about 300 gates, and 2.6\% at 38 qubits with 606 gates, bracketed by the FakeTorino and FakeFez noise
@@ -295,13 +300,11 @@ limit of the quantum step at about ten UEs per domain at depth 1. Error suppress
 24- and 38-qubit domains in one calibration session with dynamical decoupling (XY4)~\cite{Viola1999}, and with
 dynamical decoupling plus Pauli twirling~\cite{Wallman2016}, lowered the feasible fraction from the in-session control
 values of 25.0\% and 2.4\% to 21.1\% and 0.7\%, and to 13.8\% and 0.2\%, because these circuits have almost no idle time
-in which decoupling could help and twirling inserts further gates. The unmitigated yield of the same circuit also
-varied by about ten points between calibration sessions (34.8\% against 25.0\%), so every device comparison here is
-made within one session.
+in which decoupling could help and twirling inserts further gates. Because the unmitigated yield of one circuit varied by ten
+points between calibration sessions (34.8\% against 25.0\%), all device comparisons are made within one session.
 
-We therefore claim no quantum advantage. In simulation the QAOA layers only concentrate a constrained sampler, from
-the uniform 0.22 to 0.28 at depth 1 and 0.42 at depth 2 from the $W$ state, and on every hardware-sized domain greedy
-association is already optimal. The instances on which it is not, 50 UEs and above in Table~\ref{tab:optimality_gap},
+We therefore claim no quantum advantage: in simulation the QAOA layers only concentrate a constrained sampler (0.42
+at depth 2 from the $W$ state), and on every hardware-sized domain greedy association is already optimal. The instances on which it is not, 50 UEs and above in Table~\ref{tab:optimality_gap},
 need 140 to 200 qubits per domain, beyond simulation and beyond the gate budget that the feasible-shot fractions
 above allow on current devices; whether a sampler at that size concentrates on the optimal set is the question this
 work leaves open.

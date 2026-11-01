@@ -29,11 +29,17 @@ def main():
         a = gr.iloc[0] if len(gr) else (wr.iloc[0] if len(wr) else None)
         if a is None:
             continue
-        rows.append((ues, seed, dom, a, gr.iloc[0] if len(gr) else None, wr.iloc[0] if len(wr) else None))
+        w_row = None
+        if len(wr):
+            same = wr[wr["backend"] == a["backend"]] if len(gr) else wr
+            w_row = same.iloc[0] if len(same) else wr.iloc[0]
+            print(f"W-state row for {ues} UEs seed {seed} domain {dom}: {w_row['backend']} (greedy on {a['backend']})")
+        rows.append((ues, seed, dom, a, gr.iloc[0] if len(gr) else None, w_row))
     rows.sort(key=lambda r: (r[0], r[1], r[2]))
     lines = [
         "\\begin{table}[!t]", "\\centering",
-        "\\caption{Device Sampling Results on IBM Heron Processors}", "\\label{tab:hardware}", "\\scriptsize",
+        "\\caption{Device Sampling Results on IBM Heron Processors (greedy start: \\texttt{ibm\\_kingston}, seeds 6 and 7 on \\texttt{ibm\\_fez}; $W$-state start: \\texttt{ibm\\_fez})}",
+        "\\label{tab:hardware}", "\\scriptsize",
         "\\resizebox{\\columnwidth}{!}{%",
         "\\begin{tabular}{|l|c|c|c|cc|cc|cc|c|}", "\\hline",
         "\\textbf{Instance} & \\textbf{Qubits} & \\textbf{2q} & \\textbf{Spread} & \\multicolumn{2}{c|}{\\textbf{Feasible shots}} & "

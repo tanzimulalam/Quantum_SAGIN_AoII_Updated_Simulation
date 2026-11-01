@@ -1,0 +1,10 @@
+# Hardware run `device_U6_k4_p1_s1_w_fez`
+
+backend: ibm_fez; 6 UEs; k_cand 4; depth 1; 4096 shots per domain; mitigation none
+
+ILP optimum eta = 2.5062; simulator compact-QAOA eta = 2.5062; device-decoded schedule eta = 2.5062 (gap +0.00%), feasible = True
+
+| domain | qubits | 2q gates | depth | hw feasible frac | P(opt shot) | P(opt | feasible) | approx ratio | uniform P(opt) | uniform ratio | best = exact opt |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 0 | 18 | 179 | 193 | 0.401 | 0.063 | 0.158 | 0.908 | 0.125 | 0.894 | True |
+| 1 | 20 | 314 | 372 | 0.161 | 0.028 | 0.173 | 0.665 | 0.125 | 0.623 | True |

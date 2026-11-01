@@ -498,4 +498,18 @@ others are not (35 to 307% on seeds 1, 2d0, 3, 7d1). At 38 qubits (10 UEs) P(opt
 uniform baseline, while P(optimal | feasible) is 0.24 to 0.37 and the approximation ratio of feasible shots 0.86
 against 0.79 uniform: noise destroys most shots, and the surviving feasible ones still carry the warm start. These
 numbers quantify what "decoded to the exact optimum" means: with a greedy warm start that is already optimal, the
-device result is retention of the warm start under noise, not a search. W-state (no warm start) runs: see below.
+device result is retention of the warm start under noise, not a search. W-state (no warm start) runs: see the next subsection.
+
+### W-state (no warm start) device runs, ibm_fez, 1 November 2026 (`scripts/device_batch_wstate_fez.sh`)
+
+Same domains, angles optimized from the W state on the simulator, 4096 shots, no error suppression. Feasible-shot
+fraction 16 to 66% on the 6-UE domains (the W-state preparation ladder deepens the circuits) and 1.4% at 38 qubits.
+P(optimal | feasible shot) 0.04 to 0.33 against the uniform baseline 0.016 to 0.25 (ratio to uniform 0.5 to 2.1 across
+the twelve 6-UE domains); mean approximation ratio of feasible shots within +0.00 to +0.04 of the uniform value;
+P(optimal shot) 0.006 to 0.22. At 38 qubits no feasible shot was optimal (uniform 0.006). Every decoded network
+schedule still attained the ILP optimum (the 38-qubit run's best domain sample was suboptimal for the domain but
+tied at the network worst case). Conclusion written into Section VI-E: at depth 1 on hardware the W-state sampler is a
+uniform sampler of the feasible set; the greedy-start results are retention of an already-optimal warm start; the
+schedule optimum is reached because the decoder keeps the best of thousands of shots over small feasible sets. The
+ibm_kingston copies of the same jobs were queued at the time of writing (`scripts/device_batch_wstate.sh`,
+`device_batch_wstate_parallel.sh`); `make_hardware_table.py` prefers a same-device W-state row when one exists.

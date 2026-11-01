@@ -41,8 +41,7 @@ with step $\mu>0$ and $\mathbf{w}^{(1)}$ uniform, for $T$ outer iterations; the 
 that hurt the current schedule most. Equation~\eqref{eq:cert} is the exact worst-case AoII of $\mathbf{x}^{(t)}$ over $\mathscr{L}$, computed in
 $\mathcal{O}(L|\mathscr{U}|)$; SENTINEL returns the iterate with the smallest $\eta^{(t)}$ together with that value as
 its certificate. Because the inner problem~\eqref{eq:inner} has a linear objective, it needs neither the epigraph
-variable nor the scenario slacks of a direct minimax encoding. In our instances those auxiliary registers,
-$M_\eta+\sum_\ell W_\ell$ qubits per domain, outnumbered the decision qubits.
+variable nor the scenario slacks of a direct minimax encoding.
 
 %-----------------------------------------------------------------------
 \subsection{Candidate Pruning}
@@ -156,8 +155,8 @@ transverse field only on the slack bits~\cite{Hadfield2019}:
 \end{equation}
 where $\mathrm{ring}(\cdot)$ denotes adjacent pairs in a cyclic ordering of the group. Each XY term conserves the
 Hamming weight of its group, so every Trotter factor of $e^{-\mathrm{i}\theta H_M^{(k)}}$ does as well, and a state
-initialized in the one-hot subspace stays in it exactly; the only way a measured sample can violate D1 is through
-hardware noise, which the decoder detects. Each group is initialized either in its $W$ state, the uniform
+initialized in the one-hot subspace stays in it exactly, so a measured sample can violate D1 only through hardware
+noise. Each group is initialized either in its $W$ state, the uniform
 superposition of its one-hot basis states, prepared with a linear-depth ladder of controlled rotations, or in the
 basis state of the greedy assignment of Section~\ref{sec:compact_qubo}, which we call the warm start. The depth-$p$ state is
 \begin{equation}

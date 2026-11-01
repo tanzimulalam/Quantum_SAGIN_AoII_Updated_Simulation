@@ -216,10 +216,6 @@ $R^{us}_{ij}(\ell)$, $R^{ub}_{in}$ & Uplink rate of $u_i$ to $s_j$ (scenario $\e
 \hline
 $V_{ij}(t)$, $\Theta$ & Elevation of $s_j$ at $u_i$; minimum elevation \\
 \hline
-$X_i(t)$, $\hat{X}_i(t)$ & Monitored source of $u_i$; edge estimate \\
-\hline
-$\mathcal{X}_i$, $P_i$, $\pi_i$ & State space, transition matrix, stationary distribution \\
-\hline
 $\Delta_i^{II}(t)$, $\Delta_i^{II,\max}$ & Instantaneous AoII; AoII budget \\
 \hline
 $\Psi_i(Y)$ & Expected AoII accumulated over an interval of length $Y$ \\
@@ -314,10 +310,9 @@ under scenario $\ell$ only if $R^{us}_{ij}(\ell)\,T_s\geq D_i$ and $V_{ij}(t)\ge
 size in bits. BS links are unaffected. We use five scenarios: the nominal channel; a deep shadowing event in which
 every satellite link loses $\sigma_{\mathrm{sf}}$ of the non-line-of-sight state, 12~dB in the suburban tables, for a
 window of $T^{\mathrm{dis}}$ slots; the handover interruption of each individual satellite, a complete outage of that
-link for the duration of a handover; and the joint outage of all satellites for the deep-shadowing window. An earlier
-version of the set also contained a mild 6~dB scenario; the sensitivity study of Section~VI shows that it never binds,
-and that the certificate and the hedging behaviour of the robust schedule appear only once the handover of the
-second shared satellite is in the set, which is why the handover scenarios are kept per satellite.
+link for the duration of a handover; and the joint outage of all satellites for the deep-shadowing window. A mild 6~dB
+scenario was dropped after the sensitivity study of Section~VI showed that it never binds; the handover scenarios are
+kept per satellite because the hedge appears only once the second shared satellite's handover is in the set.
 
 A scenario thus determines the length of the outage window and therefore the inter-delivery interval
 $Y_{i,\kappa}(\ell)$, the number of slots from $t_{i,\kappa}$ until the next slot in which $g_i(t)=1$ and the delivery
@@ -398,9 +393,8 @@ never changed the optimum and reduced the qubit count by a further factor of two
 A serving node acknowledges each delivered update. A UE whose transmissions to a node have failed in every slot of a
 window of $T^{\mathrm{f}}$ slots declares the link failed and avoids that node for $T^{\mathrm{b}}$ slots or, for a
 satellite, until its next handover; its controller re-solves the domain problem without that link at the next
-orchestration interval. The rule applies to every policy in Section~VI, because any state-aware baseline needs the
-same information to be competitive and because the value of a robust schedule depends on whether such feedback
-exists; both regimes are reported.
+orchestration interval. The rule applies to every policy in Section~VI, since any state-aware baseline needs the same
+information to be competitive; both regimes are reported.
 
 \subsection{Distributed Orchestration Model}
 \label{sec:orchestration}
