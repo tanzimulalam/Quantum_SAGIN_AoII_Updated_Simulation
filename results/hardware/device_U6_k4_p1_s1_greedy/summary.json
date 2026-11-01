@@ -7,6 +7,12 @@
   "shots": 4096,
   "ilp_eta": 2.5062393836918995,
   "sim_compact_qaoa_eta": 2.5062393836918995,
+  "max_sim_qubits": 26,
+  "mitigation": "none",
+  "init": "greedy",
+  "dual_solver": "qaoa_xy",
+  "sat_bw_mhz": null,
+  "bs_bw_mhz": null,
   "domains": [
     {
       "domain": 0,
@@ -18,11 +24,31 @@
       "sim_best_energy": 1.9799091877291946,
       "greedy_energy": 1.9799091877291946,
       "estimated_qpu_s_upper": 8.192,
+      "params": [
+        0.010511173720998412,
+        1.0999437661774136
+      ],
+      "param_names": [
+        "b0",
+        "g0"
+      ],
+      "params_source": "simulator",
       "hw_onehot_sample_fraction": 0.632568359375,
       "hw_feasible_sample_fraction": 0.632568359375,
       "hw_best_energy": 1.9799091877291946,
       "hw_mean_qubo_energy": 2.607343430502591,
-      "hw_matches_sim_best": true
+      "hw_matches_sim_best": true,
+      "onehot_states": 96,
+      "feasible_states": 96,
+      "optimal_states": 12,
+      "exact_domain_optimum": 1.9799091877291946,
+      "p_uniform_optimal": 0.125,
+      "uniform_approx_ratio": 0.893743932861478,
+      "energy_spread_rel": 0.42785273820965736,
+      "best_equals_exact_optimum": true,
+      "p_optimal_shot": 0.60302734375,
+      "p_optimal_given_feasible": 0.953299884214589,
+      "approx_ratio_feasible": 0.9962332139735527
     }
   ],
   "job_id": "dbgjgr9t9uhs73c8act0",

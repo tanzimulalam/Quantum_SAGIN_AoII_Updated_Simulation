@@ -475,3 +475,27 @@ Paired tests (Wilcoxon, Holm-corrected within the sweep, 60 seeds):
   optimum, every decoded schedule at the exact ILP optimum, 29 s of QPU time); it is a correct constrained sampler (1.5 to 2.2 times the
   uniform concentration on the optimal set at depth 1 to 2), not a better optimizer than greedy, which is already
   optimal on these domains.
+
+### Certificate tightness per epoch (`tests/diag_certificate_tightness.py`, `results/certificate_tightness.csv`)
+
+Robust SENTINEL, TLE + NTN, five-scenario set, 30 seeds x 4 sizes = 120 runs, 3975 orchestration epochs. The ratio of
+certified worst case to realized average AoII per epoch has median 17 (IQR 13 to 23; by size 19.3 / 16.4 / 16.4 / 16.9
+at 5 / 10 / 15 / 20 UEs). Violations are 1.3% of epochs (1.2 to 1.7% by size); when they happen the realized AoII is
+1.2 to 2.1 times the certificate at the median and up to 5.4 times (absolute excess median 0.8 to 5.0 AoII). The bound
+is loose because every scenario applies its outage to every inter-delivery interval of the epoch, i.e. a persistent
+disruption, while realized disruptions are intermittent; it is violated only by blocked passes outside the scenario
+set, and those violations are large rather than marginal. The paper reports both facts (Section VI-B).
+
+### Per-shot statistics of the device runs (`sentinel/sample_stats.py`, `hardware_run.py --reanalyze`)
+
+For every device domain the one-hot assignments are enumerated (16 to 52736 feasible states), giving the exact
+domain optimum, the fraction of optimal states (uniform-sampling baseline) and the energy spread of the feasible set.
+Greedy-start runs (`results/hardware/runs.md`): P(shot is an optimal assignment) 0.32 to 0.85 on the 6-UE domains
+against 0.016 to 0.25 under uniform feasible sampling; P(optimal | feasible shot) 0.91 to 0.99; mean approximation
+ratio over feasible shots 0.98 to 1.00 against 0.62 to 1.00 uniform. Several domains are nearly flat (energy spread of
+the feasible set 0.03 to 2% on seeds 2d1, 5, 6, 7d0), where any feasible assignment is within 2% of the optimum, and
+others are not (35 to 307% on seeds 1, 2d0, 3, 7d1). At 38 qubits (10 UEs) P(optimal shot) is 0.006, equal to the
+uniform baseline, while P(optimal | feasible) is 0.24 to 0.37 and the approximation ratio of feasible shots 0.86
+against 0.79 uniform: noise destroys most shots, and the surviving feasible ones still carry the warm start. These
+numbers quantify what "decoded to the exact optimum" means: with a greedy warm start that is already optimal, the
+device result is retention of the warm start under noise, not a search. W-state (no warm start) runs: see below.

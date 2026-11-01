@@ -9,6 +9,10 @@
   "sim_compact_qaoa_eta": 2.060714735852709,
   "max_sim_qubits": 26,
   "mitigation": "dd_twirl",
+  "init": "greedy",
+  "dual_solver": "sa_xy",
+  "sat_bw_mhz": null,
+  "bs_bw_mhz": null,
   "domains": [
     {
       "domain": 0,
@@ -33,7 +37,18 @@
       "hw_feasible_sample_fraction": 0.13818359375,
       "hw_best_energy": 1.5650877741525744,
       "hw_mean_qubo_energy": 4.66372273544179,
-      "hw_matches_sim_best": true
+      "hw_matches_sim_best": true,
+      "onehot_states": 576,
+      "feasible_states": 576,
+      "optimal_states": 36,
+      "exact_domain_optimum": 1.5650877741525744,
+      "p_uniform_optimal": 0.0625,
+      "uniform_approx_ratio": 0.7654860732104791,
+      "energy_spread_rel": 1.1481440413401651,
+      "best_equals_exact_optimum": true,
+      "p_optimal_shot": 0.118896484375,
+      "p_optimal_given_feasible": 0.8604240282685512,
+      "approx_ratio_feasible": 0.9740304037424804
     }
   ],
   "job_id": "dbgnev1q260s73btl0ig",

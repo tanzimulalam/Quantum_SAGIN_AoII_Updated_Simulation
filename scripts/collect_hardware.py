@@ -26,7 +26,12 @@ def main():
                 continue
             rows.append({
                 "run": d.name, "mode": s["mode"], "backend": s["backend"], "ues": s["ues"], "seed": seed,
-                "mitigation": s.get("mitigation", "none"),
+                "mitigation": s.get("mitigation", "none"), "init": s.get("init", "greedy"),
+                "p_optimal_shot": dom.get("p_optimal_shot"), "p_optimal_given_feasible": dom.get("p_optimal_given_feasible"),
+                "approx_ratio_feasible": dom.get("approx_ratio_feasible"), "p_uniform_optimal": dom.get("p_uniform_optimal"),
+                "uniform_approx_ratio": dom.get("uniform_approx_ratio"), "energy_spread_rel": dom.get("energy_spread_rel"),
+                "feasible_states": dom.get("feasible_states"), "optimal_states": dom.get("optimal_states"),
+                "best_equals_exact_optimum": dom.get("best_equals_exact_optimum"),
                 "domain": dom["domain"], "qubits": dom["n_qubits"], "two_qubit_gates": dom["two_qubit_gates"],
                 "depth": dom["transpiled_depth"], "shots": s["shots"],
                 "feasible_frac": dom["hw_feasible_sample_fraction"],
@@ -41,12 +46,15 @@ def main():
     df.to_csv(HW / "runs.csv", index=False)
     dev = df[df["mode"] == "device"]
     md = ["# Hardware runs", "", "## Real device", "",
-          "| run | backend | mitigation | UEs | seed | domain | qubits | 2q gates | depth | shots | feasible shots | best = noiseless opt | schedule gap vs ILP | QPU s | job |",
-          "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
+          "| run | backend | init | mitigation | UEs | seed | domain | qubits | 2q gates | feasible shots | P(opt shot) | P(opt given feasible) | approx ratio | uniform P(opt) | uniform ratio | spread | best = opt | schedule gap vs ILP | QPU s | job |",
+          "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
+    f3 = lambda v: "n/a" if v is None or pd.isna(v) else f"{v:.3f}"
     for _, r in dev.iterrows():
         gap = f"{r.gap_pct:+.2f}%" if pd.notna(r.gap_pct) else "n/a"
-        md.append(f"| {r.run} | {r.backend} | {r.mitigation} | {r.ues} | {r.seed} | {r.domain} | {r.qubits} | {r.two_qubit_gates} | {r.depth} | {r.shots} | "
-                  f"{100*r.feasible_frac:.1f}% | {'yes' if r.best_matches_noiseless else 'no'} | {gap} | {r.qpu_s} | {r.job_id} |")
+        spread = "n/a" if pd.isna(r.energy_spread_rel) else f"{100*r.energy_spread_rel:.1f}%"
+        md.append(f"| {r.run} | {r.backend} | {r.init} | {r.mitigation} | {r.ues} | {r.seed} | {r.domain} | {r.qubits} | {r.two_qubit_gates} | "
+                  f"{100*r.feasible_frac:.1f}% | {f3(r.p_optimal_shot)} | {f3(r.p_optimal_given_feasible)} | {f3(r.approx_ratio_feasible)} | "
+                  f"{f3(r.p_uniform_optimal)} | {f3(r.uniform_approx_ratio)} | {spread} | {'yes' if r.best_matches_noiseless else 'no'} | {gap} | {r.qpu_s} | {r.job_id} |")
     if len(dev):
         md += ["", f"Device domains sampled: {len(dev)}; best sample equals the noiseless optimum in "
                f"{int(dev.best_matches_noiseless.sum())} of {len(dev)}; total QPU time {dev.drop_duplicates('job_id').qpu_s.fillna(0).sum():.0f} s over {dev.job_id.nunique()} jobs; "

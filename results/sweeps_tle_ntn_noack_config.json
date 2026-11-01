@@ -69,6 +69,7 @@
   },
   "dis": {
     "mild_shadowing_db": 6.0,
+    "mild_scenario": true,
     "severe_shadowing_db": 12.0,
     "mild_window_slots": 20,
     "severe_window_slots": 30,

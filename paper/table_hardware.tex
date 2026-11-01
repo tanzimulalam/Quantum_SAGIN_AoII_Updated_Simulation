@@ -1,0 +1,28 @@
+\begin{table}[!t]
+\centering
+\caption{Device Sampling Results on IBM Heron Processors}
+\label{tab:hardware}
+\scriptsize
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{|l|c|c|c|cc|cc|cc|c|}
+\hline
+\textbf{Instance} & \textbf{Qubits} & \textbf{2q} & \textbf{Spread} & \multicolumn{2}{c|}{\textbf{Feasible shots}} & \multicolumn{2}{c|}{$P(\text{opt. shot})$} & \multicolumn{2}{c|}{$P(\text{opt.}\mid\text{feas.})$} & \textbf{Unif.} \\
+ & & \textbf{gates} & & greedy & $W$ & greedy & $W$ & greedy & $W$ & $P(\text{opt.})$ \\
+\hline
+6 UEs, s1, d0 & 18 & 139 & 43\% & 63\% & -- & 0.60 & -- & 0.95 & -- & 0.125 \\
+6 UEs, s1, d1 & 20 & 301 & 307\% & 43\% & -- & 0.40 & -- & 0.93 & -- & 0.125 \\
+6 UEs, s2, d0 & 18 & 139 & 35\% & 61\% & -- & 0.58 & -- & 0.95 & -- & 0.031 \\
+6 UEs, s2, d1 & 12 & 58 & 0\% & 74\% & -- & 0.69 & -- & 0.94 & -- & 0.016 \\
+6 UEs, s3, d0 & 24 & 305 & 115\% & 35\% & -- & 0.32 & -- & 0.91 & -- & 0.062 \\
+6 UEs, s3, d1 & 14 & 120 & 263\% & 70\% & -- & 0.67 & -- & 0.96 & -- & 0.250 \\
+6 UEs, s5, d0 & 12 & 58 & 0\% & 76\% & -- & 0.74 & -- & 0.98 & -- & 0.125 \\
+6 UEs, s5, d1 & 12 & 58 & 0\% & 76\% & -- & 0.75 & -- & 0.98 & -- & 0.125 \\
+6 UEs, s6, d0 & 8 & 38 & 1\% & 86\% & -- & 0.85 & -- & 0.99 & -- & 0.250 \\
+6 UEs, s6, d1 & 16 & 79 & 1\% & 62\% & -- & 0.59 & -- & 0.95 & -- & 0.062 \\
+6 UEs, s7, d0 & 12 & 58 & 2\% & 72\% & -- & 0.70 & -- & 0.97 & -- & 0.125 \\
+6 UEs, s7, d1 & 18 & 142 & 63\% & 59\% & -- & 0.55 & -- & 0.93 & -- & 0.125 \\
+10 UEs, s1, d0 & 38 & 606 & 82\% & 3\% & -- & 0.01 & -- & 0.24 & -- & 0.006 \\
+\hline
+\end{tabular}%
+}
+\end{table}

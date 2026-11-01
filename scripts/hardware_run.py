@@ -27,6 +27,7 @@ from sentinel.experiments import configure
 from sentinel.solvers.ilp import solve_p3_exact
 from sentinel.compact import (compact_sentinel_solve, prune_candidates, build_compact_qubo, _shared_sats, greedy_sel)
 from sentinel.solvers.qaoa_xy import build_xy_circuit, decode_xy_counts, qaoa_xy
+from sentinel.sample_stats import enumerate_onehot, shot_statistics
 from run_validation import make_instance
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -35,9 +36,14 @@ OUT = ROOT / "results" / "hardware"
 
 def prepare(args):
     """Optimize everything on the simulator; return the instance, per-domain QUBOs with final weights, angles, and references."""
-    cfg = configure(FullConfig(), net__num_ues=args.ues, net__num_bs=2, net__num_sat=2, net__num_domains=2,
-                    solver__solver="sa_xy", solver__qaoa_depth=args.depth, solver__qaoa_shots=512,
-                    solver__qaoa_maxiter=args.iters, solver__admm_max_rounds=4)
+    radio = {}
+    if getattr(args, "sat_bw_mhz", None):
+        radio["radio__sat_bandwidth_mhz"] = float(args.sat_bw_mhz)
+    if getattr(args, "bs_bw_mhz", None):
+        radio["radio__bs_bandwidth_mhz"] = float(args.bs_bw_mhz)
+    cfg = configure(FullConfig(), net__num_ues=args.ues, net__num_bs=2, net__num_sat=2, net__num_domains=2, **radio,
+                    solver__solver=args.dual_solver, solver__qaoa_depth=args.depth, solver__qaoa_shots=512,
+                    solver__qaoa_maxiter=args.iters, solver__max_qaoa_qubits=64, solver__admm_max_rounds=4)
     inst = make_instance(cfg, args.seed, 6)
     ref = solve_p3_exact(inst)["eta"]
     pruned = prune_candidates(inst, args.k_cand)
@@ -113,6 +119,12 @@ def main():
     ap.add_argument("--domains", default="all", help="comma-separated domain indices to sample on the device (default all)")
     ap.add_argument("--max-sim-qubits", type=int, default=26, help="largest domain optimized on the statevector simulator; larger domains get transferred angles")
     ap.add_argument("--transfer-from", default=None, help="results/hardware/<tag> whose largest simulated domain donates angles to oversized domains")
+    ap.add_argument("--sat-bw-mhz", type=float, default=None, help="satellite bandwidth capacity (default: config, 50 MHz); smaller values make capacity bind")
+    ap.add_argument("--bs-bw-mhz", type=float, default=None, help="BS bandwidth capacity (default: config, 20 MHz)")
+    ap.add_argument("--dual-solver", choices=["sa_xy", "qaoa_xy"], default="sa_xy",
+                    help="inner solver of the scenario-weight/ADMM loop that builds the domain QUBOs (qaoa_xy reproduces runs made before 28 Oct 2026)")
+    ap.add_argument("--reanalyze", action="store_true",
+                    help="recompute per-shot statistics of an existing run (its --tag folder) from the saved counts; nothing is sampled")
     ap.add_argument("--mitigation", choices=["none", "dd", "dd_twirl"], default="none",
                     help="device-side error suppression: dynamical decoupling (XY4) and optionally Pauli twirling of gates and measurements")
     args = ap.parse_args()
@@ -125,7 +137,12 @@ def main():
     print(f"instance: {args.ues} UEs, pruned vars {pruned.num_vars}; ILP optimum eta = {ref:.4f}; simulator compact-QAOA eta = {res.eta:.4f}", flush=True)
 
     # backend
-    if args.mode == "device":
+    if args.reanalyze:
+        old = json.loads((out / "summary.json").read_text())
+        class _B: name = old["backend"]
+        backend = _B()
+        print("re-analysis of", tag, "on saved counts from", backend.name, flush=True)
+    elif args.mode == "device":
         from qiskit_ibm_runtime import QiskitRuntimeService
         service = QiskitRuntimeService()
         backend = service.backend(args.backend) if args.backend else service.least_busy(operational=True, simulator=False)
@@ -136,15 +153,20 @@ def main():
         print("fake backend:", backend.name, flush=True)
 
     summary = {"mode": args.mode, "backend": backend.name, "ues": args.ues, "k_cand": args.k_cand, "depth": args.depth,
-               "shots": args.shots, "ilp_eta": ref, "sim_compact_qaoa_eta": res.eta, "max_sim_qubits": args.max_sim_qubits, "mitigation": args.mitigation, "domains": []}
+               "shots": args.shots, "ilp_eta": ref, "sim_compact_qaoa_eta": res.eta, "max_sim_qubits": args.max_sim_qubits, "mitigation": args.mitigation,
+               "init": args.init, "dual_solver": args.dual_solver, "sat_bw_mhz": args.sat_bw_mhz, "bs_bw_mhz": args.bs_bw_mhz, "domains": []}
     circuits = []
     if args.domains != "all":
         keep = {int(v) for v in args.domains.split(",")}
         domains = [d for d in domains if d["k"] in keep]
     for d in domains:
         dq = d["dq"]
-        bound, two_q, depth_t = transpile_for(backend, dq, d["params"], args.depth, init=args.init, warm_start_sel=d["greedy_sel"], seed=args.seed)
-        circuits.append(bound)
+        if args.reanalyze:
+            od = next(dd for dd in old["domains"] if dd["domain"] == d["k"])
+            two_q, depth_t = od["two_qubit_gates"], od["transpiled_depth"]
+        else:
+            bound, two_q, depth_t = transpile_for(backend, dq, d["params"], args.depth, init=args.init, warm_start_sel=d["greedy_sel"], seed=args.seed)
+            circuits.append(bound)
         # rough QPU-time estimate: ~ shots * (circuit time ~ depth * 0.5 us + readout ~ 1 ms per shot batch) -> use 2 ms/shot upper bound
         est_s = args.shots * 2e-3
         d_sum = {"domain": d["k"], "n_qubits": dq.n, "decision_qubits": dq.n_x, "two_qubit_gates": two_q, "transpiled_depth": depth_t,
@@ -161,7 +183,12 @@ def main():
 
     # sampling
     t0 = time.time()
-    if args.mode == "fake":
+    if args.reanalyze:
+        results = [json.loads((out / f"counts_domain{d['k']}.json").read_text()) for d in domains]
+        for key in ("job_id", "usage_s", "sampling_wall_s", "mitigation"):
+            if key in old:
+                summary[key] = old[key]
+    elif args.mode == "fake":
         from qiskit_aer import AerSimulator
         sim = AerSimulator.from_backend(backend)
         results = [sim.run(c, shots=args.shots).result().get_counts() for c in circuits]
@@ -187,7 +214,8 @@ def main():
             summary["usage_s"] = job.usage()
         except Exception:
             pass
-    summary["sampling_wall_s"] = time.time() - t0
+    if not args.reanalyze:
+        summary["sampling_wall_s"] = time.time() - t0
 
     # decode and certify
     x = np.zeros(pruned.num_vars)
@@ -201,6 +229,19 @@ def main():
         (out / f"counts_domain{d['k']}.json").write_text(json.dumps(counts))
         d_sum.update({"hw_onehot_sample_fraction": onehot, "hw_feasible_sample_fraction": feas, "hw_best_energy": best_e,
                       "hw_mean_qubo_energy": e_mean, "hw_matches_sim_best": bool(best_sel is not None and abs(best_e - d["sim"]["best_energy"]) < 1e-9)})
+        enum = enumerate_onehot(dq, pruned)
+        st = shot_statistics(dq, pruned, counts, enum)
+        if enum is not None and enum.get("n_feasible", 0):
+            d_sum.update({"onehot_states": enum["n_states"], "feasible_states": enum["n_feasible"], "optimal_states": enum["n_optimal"],
+                          "exact_domain_optimum": enum["e_opt"], "p_uniform_optimal": enum["p_uniform_optimal"],
+                          "uniform_approx_ratio": enum["uniform_approx_ratio"], "energy_spread_rel": enum["spread_rel"],
+                          "best_equals_exact_optimum": bool(best_sel is not None and abs(best_e - enum["e_opt"]) <= 1e-9 * max(1.0, abs(enum["e_opt"])))})
+        d_sum.update({"p_optimal_shot": st["p_optimal_shot"], "p_optimal_given_feasible": st["p_optimal_given_feasible"],
+                      "approx_ratio_feasible": st["approx_ratio_feasible"]})
+        print(f"  domain {d['k']}: P(optimal shot) {st['p_optimal_shot']:.3f}, P(optimal | feasible) {st['p_optimal_given_feasible']:.3f}, "
+              f"approx. ratio {st['approx_ratio_feasible']:.3f}; uniform-feasible baseline P {d_sum.get('p_uniform_optimal', float('nan')):.3f}, "
+              f"ratio {d_sum.get('uniform_approx_ratio', float('nan')):.3f}; feasible-set energy spread {100*d_sum.get('energy_spread_rel', float('nan')):.2f}% "
+              f"({d_sum.get('optimal_states', 0)} optimal of {d_sum.get('feasible_states', 0)} feasible states)", flush=True)
         sel = best_sel if best_sel is not None else d["greedy_sel"]
         x[dq.x_vars] = dq.x_from_sel(sel)
         print(f"  domain {d['k']}: one-hot samples {onehot:.3f}, feasible {feas:.3f}, best energy {best_e:.4f} (sim {d['sim']['best_energy']:.4f})", flush=True)
@@ -210,10 +251,13 @@ def main():
     md = [f"# Hardware run `{tag}`", "", f"backend: {backend.name}; {args.ues} UEs; k_cand {args.k_cand}; depth {args.depth}; {args.shots} shots per domain; mitigation {args.mitigation}", "",
           f"ILP optimum eta = {ref:.4f}; simulator compact-QAOA eta = {res.eta:.4f}; device-decoded schedule eta = {eta:.4f} "
           f"(gap {100*(eta/ref-1):+.2f}%), feasible = {pruned.is_feasible(x)}", "",
-          "| domain | qubits | 2q gates | depth | sim feasible frac | hw one-hot frac | hw feasible frac | sim best E | hw best E |", "|---|---|---|---|---|---|---|---|---|"]
+          "| domain | qubits | 2q gates | depth | hw feasible frac | P(opt shot) | P(opt | feasible) | approx ratio | uniform P(opt) | uniform ratio | best = exact opt |",
+          "|---|---|---|---|---|---|---|---|---|---|---|"]
     for d_sum in summary["domains"]:
-        md.append(f"| {d_sum['domain']} | {d_sum['n_qubits']} | {d_sum['two_qubit_gates']} | {d_sum['transpiled_depth']} | {d_sum['sim_feasible_sample_fraction']:.2f} | "
-                  f"{d_sum['hw_onehot_sample_fraction']:.3f} | {d_sum['hw_feasible_sample_fraction']:.3f} | {d_sum['sim_best_energy']:.4f} | {d_sum['hw_best_energy']:.4f} |")
+        md.append(f"| {d_sum['domain']} | {d_sum['n_qubits']} | {d_sum['two_qubit_gates']} | {d_sum['transpiled_depth']} | "
+                  f"{d_sum['hw_feasible_sample_fraction']:.3f} | {d_sum.get('p_optimal_shot', float('nan')):.3f} | {d_sum.get('p_optimal_given_feasible', float('nan')):.3f} | "
+                  f"{d_sum.get('approx_ratio_feasible', float('nan')):.3f} | {d_sum.get('p_uniform_optimal', float('nan')):.3f} | {d_sum.get('uniform_approx_ratio', float('nan')):.3f} | "
+                  f"{d_sum.get('best_equals_exact_optimum', d_sum.get('hw_matches_sim_best'))} |")
     (out / "summary.md").write_text("\n".join(md) + "\n")
     print("\n".join(md))
 

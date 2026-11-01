@@ -7,6 +7,12 @@
   "shots": 4096,
   "ilp_eta": 2.060714735852709,
   "sim_compact_qaoa_eta": 2.060714735852709,
+  "max_sim_qubits": 26,
+  "mitigation": "none",
+  "init": "greedy",
+  "dual_solver": "qaoa_xy",
+  "sat_bw_mhz": null,
+  "bs_bw_mhz": null,
   "domains": [
     {
       "domain": 0,
@@ -18,11 +24,31 @@
       "sim_best_energy": 1.5650877741525744,
       "greedy_energy": 1.5650877741525744,
       "estimated_qpu_s_upper": 8.192,
+      "params": [
+        -0.002933606351237135,
+        0.8220723145601335
+      ],
+      "param_names": [
+        "b0",
+        "g0"
+      ],
+      "params_source": "simulator",
       "hw_onehot_sample_fraction": 0.34814453125,
       "hw_feasible_sample_fraction": 0.34814453125,
       "hw_best_energy": 1.5650877741525744,
       "hw_mean_qubo_energy": 3.426702160705483,
-      "hw_matches_sim_best": true
+      "hw_matches_sim_best": true,
+      "onehot_states": 576,
+      "feasible_states": 576,
+      "optimal_states": 36,
+      "exact_domain_optimum": 1.5650877741525744,
+      "p_uniform_optimal": 0.0625,
+      "uniform_approx_ratio": 0.7654860732104791,
+      "energy_spread_rel": 1.1481440413401651,
+      "best_equals_exact_optimum": true,
+      "p_optimal_shot": 0.3154296875,
+      "p_optimal_given_feasible": 0.906030855539972,
+      "approx_ratio_feasible": 0.9908269347355569
     },
     {
       "domain": 1,
@@ -34,11 +60,31 @@
       "sim_best_energy": 0.4500435835796804,
       "greedy_energy": 0.4500435835796804,
       "estimated_qpu_s_upper": 8.192,
+      "params": [
+        0.056056986508209436,
+        0.5926083597314467
+      ],
+      "param_names": [
+        "b0",
+        "g0"
+      ],
+      "params_source": "simulator",
       "hw_onehot_sample_fraction": 0.69580078125,
       "hw_feasible_sample_fraction": 0.69580078125,
       "hw_best_energy": 0.4500435835796804,
       "hw_mean_qubo_energy": 1.181934927890184,
-      "hw_matches_sim_best": true
+      "hw_matches_sim_best": true,
+      "onehot_states": 24,
+      "feasible_states": 24,
+      "optimal_states": 6,
+      "exact_domain_optimum": 0.4500435835796804,
+      "p_uniform_optimal": 0.25,
+      "uniform_approx_ratio": 0.7182394198681751,
+      "energy_spread_rel": 2.6313424325748787,
+      "best_equals_exact_optimum": true,
+      "p_optimal_shot": 0.66650390625,
+      "p_optimal_given_feasible": 0.9578947368421052,
+      "approx_ratio_feasible": 0.9876542028020662
     }
   ],
   "job_id": "dbgjnmht9uhs73c8asrg",

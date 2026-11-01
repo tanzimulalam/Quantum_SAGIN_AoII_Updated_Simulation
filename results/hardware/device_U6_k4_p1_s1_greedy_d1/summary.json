@@ -7,6 +7,12 @@
   "shots": 4096,
   "ilp_eta": 2.5062393836918995,
   "sim_compact_qaoa_eta": 2.5062393836918995,
+  "max_sim_qubits": 26,
+  "mitigation": "none",
+  "init": "greedy",
+  "dual_solver": "qaoa_xy",
+  "sat_bw_mhz": null,
+  "bs_bw_mhz": null,
   "domains": [
     {
       "domain": 1,
@@ -18,11 +24,31 @@
       "sim_best_energy": 0.48489852325152294,
       "greedy_energy": 0.48489852325152294,
       "estimated_qpu_s_upper": 8.192,
+      "params": [
+        0.016753051201031738,
+        1.4233125874825279
+      ],
+      "param_names": [
+        "b0",
+        "g0"
+      ],
+      "params_source": "simulator",
       "hw_onehot_sample_fraction": 0.427001953125,
       "hw_feasible_sample_fraction": 0.427001953125,
       "hw_best_energy": 0.48489852325152294,
       "hw_mean_qubo_energy": 1.8853252758830268,
-      "hw_matches_sim_best": true
+      "hw_matches_sim_best": true,
+      "onehot_states": 144,
+      "feasible_states": 144,
+      "optimal_states": 18,
+      "exact_domain_optimum": 0.48489852325152294,
+      "p_uniform_optimal": 0.125,
+      "uniform_approx_ratio": 0.6229044522145143,
+      "energy_spread_rel": 3.0727504348689787,
+      "best_equals_exact_optimum": true,
+      "p_optimal_shot": 0.396240234375,
+      "p_optimal_given_feasible": 0.9279588336192109,
+      "approx_ratio_feasible": 0.9794163938998137
     }
   ],
   "job_id": "dbgjjopq260s73btdpl0",

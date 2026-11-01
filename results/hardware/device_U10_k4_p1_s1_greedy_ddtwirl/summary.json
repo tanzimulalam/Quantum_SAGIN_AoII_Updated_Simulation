@@ -9,6 +9,10 @@
   "sim_compact_qaoa_eta": 2.8079709874663803,
   "max_sim_qubits": 26,
   "mitigation": "dd_twirl",
+  "init": "greedy",
+  "dual_solver": "sa_xy",
+  "sat_bw_mhz": null,
+  "bs_bw_mhz": null,
   "domains": [
     {
       "domain": 0,
@@ -33,7 +37,18 @@
       "hw_feasible_sample_fraction": 0.00244140625,
       "hw_best_energy": 2.176762086873306,
       "hw_mean_qubo_energy": 5.0514237237635085,
-      "hw_matches_sim_best": true
+      "hw_matches_sim_best": true,
+      "onehot_states": 55296,
+      "feasible_states": 52736,
+      "optimal_states": 320,
+      "exact_domain_optimum": 2.176762086873306,
+      "p_uniform_optimal": 0.006067961165048544,
+      "uniform_approx_ratio": 0.7900896663420524,
+      "energy_spread_rel": 0.8197635164108653,
+      "best_equals_exact_optimum": true,
+      "p_optimal_shot": 0.000244140625,
+      "p_optimal_given_feasible": 0.1,
+      "approx_ratio_feasible": 0.8727712923985267
     }
   ],
   "job_id": "dbgnfp0te5oc738ihpg0",

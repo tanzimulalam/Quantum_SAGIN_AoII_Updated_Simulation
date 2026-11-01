@@ -32,6 +32,10 @@ Results and figures of the current run are summarised in `RESULTS.md`.
 | `scripts/run_validation.py` | Optimality gaps of the epigraph encoding vs the exact ILP (QAOA at small scale, SA at large scale, severity and L sweeps) |
 | `scripts/run_validation_compact.py` | Same protocol for the compact formulation: ILP, Greedy+LS, epigraph ADMM, compact ADMM, compact QAOA-XY |
 | `scripts/hardware_run.py` | IBM Quantum runner: optimize on the simulator, sample once per domain on a device or a fake-backend noise model, decode and certify |
+| `sentinel/sample_stats.py` | Enumerates a domain's one-hot assignments (exact optimum, uniform-feasible baseline, energy spread) and scores measured shots: P(optimal shot), P(optimal given feasible), approximation ratio |
+| `scripts/reanalyze_device_runs.sh`, `scripts/device_batch_wstate.sh` | Per-shot statistics for every saved device run (`hardware_run.py --reanalyze`), and the W-state (no warm start) device batch |
+| `tests/diag_certificate_tightness.py` | Per-epoch certified vs realized AoII for robust SENTINEL under TLE + NTN: tightness ratio, violation rate and sizes |
+| `scripts/draw_system_model.py` | Draws Fig. 1 of the manuscript (figures/system_model.pdf) |
 | `scripts/qaoa_depth_shots_study.py` | Depth / shots / initial-state study of the XY-QAOA on hardware-sized domains (P of sampling the optimal set vs uniform) |
 | `sentinel/tle_geometry.py` | SGP4 propagation of the Starlink TLE snapshot in `data/`; persistent serving slots with natural handovers |
 | `docs/sections_I_to_IV_draft.tex`, `docs/new_references.bib` | LaTeX draft of the abstract and Sections I to IV written around the revised evidence, and the references it adds |
@@ -80,6 +84,8 @@ Hardware (IBM Quantum Open Plan). Everything is optimized on the simulator; the 
 .venv/Scripts/python.exe scripts/hardware_run.py --mode device --ues 6 --domains 0 --mitigation dd_twirl   # with dynamical decoupling and Pauli twirling
 ```
 
+`--init w` samples from the W state instead of the greedy warm start; `--reanalyze` recomputes the per-shot statistics of a saved run
+from its counts without touching the device (`--dual-solver qaoa_xy` reproduces the QUBOs of runs made before 28 Oct 2026).
 Domains above `--max-sim-qubits` (default 26) cannot be optimized on the statevector simulator; the runner transfers the
 angles of the largest simulated domain to them and records `params_source` in the summary.
 

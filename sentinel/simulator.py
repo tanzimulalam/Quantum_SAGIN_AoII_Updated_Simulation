@@ -440,6 +440,7 @@ def run_policy(ep: Episode, policy: str, plan: Optional[List[ScheduleEpoch]] = N
         realized = epoch_aoii_sum / np.maximum(epoch_slots, 1)
         res.certified_eta_mean = float((cert * w).sum() / w.sum())
         res.certificate_holds = float((realized <= cert + 1e-9).mean())
+        res.epoch_detail = {"realized": realized.tolist(), "certified": cert.tolist(), "weight": w.tolist()}  # plain attribute, not a row field
         res.solver = plan[0].solver
         res.qubits_max = int(max(max(e.qubits) if e.qubits else 0 for e in plan))
         res.solve_time_s = float(sum(e.time_s for e in plan))

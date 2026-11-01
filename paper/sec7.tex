@@ -4,7 +4,8 @@
 %=======================================================================
 
 This paper asked how a satellite-ground edge network should schedule status updates when what matters is whether the
-edge estimate is correct, and when the satellite links that carry most of the traffic fail for minutes at a time. We
+edge estimate is correct, and when the satellite links that carry most of the traffic fail for a fraction of a second at each handover and for a
+whole pass under blockage. We
 formulated the robust problem VANGUARD, reduced the history-dependent AoII to a tabulated cost per inter-delivery
 interval through a renewal-interval decomposition, and solved the resulting minimax assignment with SENTINEL, which
 dualizes the minimax into classically updated scenario weights, encodes each domain's linear subproblem as a compact
@@ -15,8 +16,9 @@ Under Starlink passes and the TR 38.811 channel the certificate held in 98.7\% o
 certificate was 2 to 7\% below the nominal one while the two were indistinguishable in realized AoII with and without
 failure feedback, and SENTINEL with a state-aware trigger came within 10 to 20\% of the best per-slot heuristic, which
 coincides with the Whittle-index scheduler at these bandwidths, while beating it by 25 to 30\% at 15 to 20 UEs when
-feedback is removed. The compact formulation needs four to five times fewer qubits than a direct epigraph encoding,
-is exact through 25 UEs, and is limited at 75 to 100 UEs by the coordination of shared satellites. Thirteen device
+feedback is removed. The compact formulation needs four to six times fewer qubits than a direct epigraph encoding,
+matches the exact optimum on the 10- and 25-UE instances, and is limited at 75 to 100 UEs by the coordination of
+shared satellites. Thirteen device
 domains of 8 to 38 qubits all decoded to the exact optimum, with the fraction of usable shots falling from 86\% to
 2.6\% and not improved by error suppression; at these sizes the quantum sampler is correct but not a better optimizer
 than greedy association. Three directions follow: a coordinator that negotiates per-UE assignments rather than

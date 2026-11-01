@@ -13,7 +13,7 @@ repository.
 
 \begin{table}[t]
 \centering
-\caption{Simulation Parameters (values used for all figures)}
+\caption{Simulation Parameters}
 \label{tab:simulation_parameters}
 \scriptsize
 \renewcommand{\arraystretch}{1.12}
@@ -22,7 +22,7 @@ repository.
 \textbf{Parameter} & \textbf{Value} \\
 \hline
 \multicolumn{2}{l}{\emph{Network}} \\
-Number of UEs & $\{5,10,15,20\}$; up to 100 in Sec.~VI-D \\
+Number of UEs & $\{5,10,15,20\}$; up to 100 in Sec.~\ref{sec:exact_validation} \\
 BSs / satellite serving slots & 2 / 2 (topology study: 0 to 3 each) \\
 Area; BS height; UE height & $20\times20$~km$^2$; 25~m; 1.5~m \\
 Satellite passes & Starlink TLE snapshot, SGP4, MTSU site (35.85$^\circ$N, 86.39$^\circ$W); min.\ elevation $25^\circ$ \\
@@ -47,9 +47,9 @@ Realized process (per 1~s interval) & TR~38.811 state per pass; shadowing event 
 Link-failure handling (all policies) & node blocked after 60 failed slots, for 6~s or until its next handover; SENTINEL re-solves \\
 \hline
 \multicolumn{2}{l}{\emph{Solver}} \\
-Formulation & compact dual, $\kappa=4$, $T=6$ outer iterations, $\sigma=2$ \\
+Formulation & compact dual, $\varkappa=4$, $T=6$ outer iterations, $\mu=2$ \\
 Local solver & XY-QAOA, depth 1, 512 shots, COBYLA 40 it.\ ($\le 26$ qubits); one-hot annealing otherwise \\
-ADMM $\varrho_0$, tolerance, rounds & scaled to cost spread, $10^{-2}$, 20 \\
+ADMM $\lambda_{\mathrm{c},0}$, tolerance, rounds & scaled to cost spread, $10^{-2}$, 20 \\
 Re-solve & on visibility change, on link failure, at least every 30~s \\
 Quantum backend & Qiskit Aer~\cite{Qiskit2024}; FakeTorino / FakeFez; \texttt{ibm\_kingston}, \texttt{ibm\_fez} \\
 \hline
@@ -66,11 +66,14 @@ delivers every admitted packet; it has the threshold policy's observations and r
 agent~\cite{Schulman2017} that selects, once per orchestration interval, a serving node and an update-period level for
 every UE, with invisible or failed nodes masked and equal bandwidth sharing, rewarded with the negative mean AoII of
 the interval; it is trained for 5000 episodes per network size on 30 seeds disjoint from the evaluation seeds and
-evaluated deterministically on the same episodes as every other policy. \emph{Nominal SENTINEL} runs Algorithm~1
+evaluated deterministically on the same episodes as every other policy. It acts once per interval with equal
+sharing, like SENTINEL, so that the comparison isolates the decision rule from the actuation; a learned per-slot
+policy that observes the source would be a different baseline, and that role is filled by the threshold and
+Whittle policies. \emph{Nominal SENTINEL} runs Algorithm~1
 with the nominal scenario alone ($L=1$). \emph{SENTINEL} is the robust schedule with the five-scenario set. \emph{SENTINEL
 + trigger} uses SENTINEL's association and bandwidth with transmissions triggered by the observed mismatch,
 rate-capped at the chosen period. Every policy receives the same acknowledgement feedback and applies the same
-link-failure rule of Section~III-F. The exact reference for Section~VI-D is the integer linear program
+link-failure rule of Section~\ref{sec:feedback}. The exact reference for Section~\ref{sec:exact_validation} is the integer linear program
 $\mathscr{P}_3$ solved with HiGHS~\cite{HiGHS2018}.
 
 %-----------------------------------------------------------------------
@@ -81,20 +84,23 @@ $\mathscr{P}_3$ solved with HiGHS~\cite{HiGHS2018}.
 \begin{figure}[!t]
 \centering
 \includegraphics[width=0.86\columnwidth]{figures/ue_sweep_average_aoii_median_disruption_on.pdf}
-\caption{Median average AoII (bars) and interquartile range (whiskers) over 30 seeds versus the number of UEs, with
-Starlink passes, the TR~38.811 channel, and the stochastic disruption process active.}
+\caption{Median average AoII versus the number of UEs (whiskers: IQR over 30 seeds).}
 \label{fig:ue_sweep}
 \end{figure}
 
-Fig.~\ref{fig:ue_sweep} and Table~\ref{tab:tle} give the median average AoII from 5 to 20 UEs. Three groups are
-visible. The state-aware per-slot policies, AoII threshold and Whittle index, are lowest at 0.13 to 0.15 and coincide
-(Section~VI-C). The SENTINEL schedules, robust and nominal, sit at 0.25 to 0.28 and do not grow with the number of
+Figure~\ref{fig:ue_sweep} and Table~\ref{tab:tle} give the median average AoII from 5 to 20 UEs. In every
+network-level result of this section the inner solver of Algorithm~1 was the one-hot-preserving annealer: the domains
+of these instances span 12 to 76 qubits and the dual loop re-solves them hundreds of times per run, which the
+statevector sampler cannot sustain. The XY-mixer QAOA is validated against the annealer and the exact optimum on
+domains of up to 24 qubits in Section~\ref{sec:exact_validation} and executed on hardware in
+Section~\ref{sec:device}; the network results are therefore classical except where stated. Three groups are visible. The state-aware per-slot policies, AoII threshold and Whittle index, are lowest at 0.13 to 0.15 and coincide
+(Section~\ref{sec:topology}). The SENTINEL schedules, robust and nominal, sit at 0.25 to 0.28 and do not grow with the number of
 UEs, because bandwidth levels are dedicated and a re-solve redistributes load as satellites come and go. SENTINEL with
 the state-aware trigger lies between the two at 0.155 to 0.175: it keeps the robust association and bandwidth,
 transmits only when the estimate is wrong, and thereby raises the informative-update ratio from 0.23 to 0.96 while
-retaining the certificate. Random scheduling is at 6; the trained PPO agent matches the nominal schedule at 5 UEs
-(0.280 against 0.253), degrades to 0.446 at 20 UEs as its action space grows, routes all traffic to satellites, and,
-like SENTINEL, samples without observing the source. Delivery ratios are 0.92 to 0.94 for every policy except random;
+retaining the certificate. Random scheduling is at 6; the trained PPO agent is close to the nominal schedule at 5 UEs
+(0.280 against 0.253, 11\% worse), degrades to 0.446 at 20 UEs as its action space grows, routes all traffic to
+satellites, and, like SENTINEL, samples without observing the source. Delivery ratios are 0.92 to 0.94 for every policy except random;
 the per-slot policies deliver with 2.8 to 3.0~ms of end-to-end latency against 4.7 to 5.8~ms for the SENTINEL
 schedules, whose dedicated levels are smaller than an equal share of an otherwise idle node. The satellite tier
 carries 73 to 79\% of robust SENTINEL's deliveries and 97 to 98\% of the threshold policy's. Peak AoII is 100 to 400
@@ -103,7 +109,7 @@ for every policy and is set by handover interruptions and non-line-of-sight pass
 
 \begin{table}[!t]
 \centering
-\caption{Median Average AoII with Starlink Passes and the TR~38.811 Channel (30 seeds, disruption on)}
+\caption{Median Average AoII Versus Number of UEs (30 Seeds)}
 \label{tab:tle}
 \footnotesize
 \resizebox{\columnwidth}{!}{%
@@ -128,17 +134,26 @@ for every policy and is set by handover interruptions and non-line-of-sight pass
 \begin{figure}[!t]
 \centering
 \includegraphics[width=0.78\columnwidth]{figures/certificate_vs_realized.pdf}
-\caption{Certified worst-case AoII of each orchestration run against its realized average AoII, robust and nominal
-SENTINEL, all sizes and seeds of Fig.~\ref{fig:ue_sweep}. Points below the diagonal stayed within the certificate.}
+\caption{Certified worst-case AoII versus realized average AoII per orchestration run, robust and nominal SENTINEL.}
 \label{fig:certificate}
 \end{figure}
 
-Fig.~\ref{fig:certificate} plots the certified worst case of every run against the AoII it realized. The realized
-average stayed within the certificate in 98.7\% of orchestration epochs for the robust schedule and 98.5\% for the
-nominal one; the violations are passes that enter the non-line-of-sight state, whose 17 to 25~dB clutter loss exceeds
-the 12~dB deep-shadowing scenario. With a synthetic pass model that produces coverage gaps longer than any scenario
-window the figure was 98.0\%, and every violation there was such a gap. The certificate is therefore valid against the
-scenario set it was computed from, and the paper states its scope that way.
+Figure~\ref{fig:certificate} plots, for every run, the time-weighted certified worst case against the realized
+average AoII; the per-epoch statistic is reported in the text. The realized average stayed within the certificate in
+98.7\% of orchestration epochs for the robust schedule and 98.5\% for the nominal one; the violations are passes that
+enter the non-line-of-sight state, whose 17 to 25~dB clutter loss exceeds the 12~dB deep-shadowing scenario. With a
+synthetic pass model that produces coverage gaps longer than any scenario window the figure was 98.0\%, and every
+violation there was such a gap. The certificate is valid against the scenario set it was computed from, and it is
+conservative: the certified worst case exceeds the realized average by a factor of 12 to 20 (median 15.5 over runs),
+because every scenario applies its outage to every inter-delivery interval of the epoch, which amounts to a
+persistent disruption, whereas realized disruptions are intermittent. Per epoch, the ratio of certified to realized AoII has a median of 17
+(interquartile range 13 to 23) across 3975 epochs of 120 runs, and the violations, 1.3\% of epochs, are not marginal:
+when a blocked pass defeats the bound, the realized AoII exceeds the certificate by a factor of 1.2 to 2.1 at the median
+and up to 5.4, so the certificate should be read as a guarantee against the scenario set rather than as a prediction
+of typical behaviour. The certificate is proved for the
+periodic schedule, whose deliveries do not depend on the source state; the triggered variant transmits on observed
+mismatch, so the renewal argument of Section~\ref{sec:renewal} does not cover it, and we check it empirically: its
+realized average stayed within the certificate of the schedule it runs on in 97.9 to 98.7\% of epochs.
 
 What the scenario set buys is visible in the certificate, not in the realized AoII. Across the 30 paired seeds the
 robust schedule's certified worst case is 2 to 7\% below the nominal schedule's (paired-median ratio 0.93 at 5 UEs to
@@ -151,18 +166,18 @@ significant at every size ($p\le0.013$), and PPO is significantly behind SENTINE
 \begin{figure}[!t]
 \centering
 \includegraphics[width=0.86\columnwidth]{figures/noack_ue_sweep_average_aoii_median.pdf}
-\caption{Median average AoII (60 seeds) with acknowledgement feedback and link-failure handling disabled for every
-policy.}
+\caption{Median average AoII without acknowledgement feedback or link-failure handling (60 seeds).}
 \label{fig:noack}
 \end{figure}
 
 \textbf{Without failure feedback.} Whether the network can react to a dead link matters more than any scheduling
-choice. Fig.~\ref{fig:noack} repeats the sweep with the link-failure rule disabled for every policy, on 60 seeds
+choice. Figure~\ref{fig:noack} repeats the sweep with the link-failure rule disabled for every policy, on 60 seeds
 because the distributions become heavy-tailed. Median AoII rises by an order of magnitude for all policies, the
-certificate holds in 87 to 92\% of epochs, and the threshold policy, which concentrates 98\% of its traffic on the best
-nominal satellite, ties the SENTINEL schedules at 5 and 10 UEs and falls 25 to 30\% behind SENTINEL with the trigger
-at 15 and 20 UEs (Hodges-Lehmann differences $-0.77$ and $-0.71$, Holm-corrected $p=0.023$ and $0.029$), while the
-SENTINEL schedules keep 18 to 27\% of deliveries on base stations. Robust and nominal SENTINEL remain
+certificate holds in 87 to 92\% of epochs, and the threshold and Whittle-index policies, which coincide here as well
+and concentrate 98\% of their traffic on the best nominal satellite, tie the SENTINEL schedules at 5 and 10 UEs and
+fall 25 to 30\% behind SENTINEL with the trigger at 15 and 20 UEs (Hodges-Lehmann differences $-0.77$ and $-0.71$,
+Holm-corrected $p=0.023$ and $0.029$ against the threshold policy and $0.034$ and $0.043$ against the Whittle policy),
+while the SENTINEL schedules keep 18 to 27\% of deliveries on base stations. Robust and nominal SENTINEL remain
 indistinguishable in realized AoII here as well ($p\ge0.41$). The measurable product of the robust scenario set is
 thus its lower certificate, obtained in both regimes, and the measurable value of a scheduled base-station share
 appears when feedback is absent.
@@ -182,12 +197,11 @@ at every size, with realized-AoII differences below $10^{-3}$, which is why the 
 \begin{figure}[!t]
 \centering
 \includegraphics[width=0.86\columnwidth]{figures/topology_average_aoii_median.pdf}
-\caption{Median average AoII at 10 UEs for ground-only, satellite-only, and integrated deployments (30 seeds,
-disruption on, logarithmic scale).}
+\caption{Median average AoII at 10 UEs by deployment (log scale).}
 \label{fig:topology}
 \end{figure}
 
-Fig.~\ref{fig:topology} compares deployments at 10 UEs. Two base stations cover only the UEs within 5 to 7~km of the
+Figure~\ref{fig:topology} compares deployments at 10 UEs. Two base stations cover only the UEs within 5 to 7~km of the
 $20\times20$~km$^2$ area, so ground-only monitoring fails for every policy (median AoII 63 to 81). Two satellite
 serving slots alone bring the per-slot policies to 0.14 and the SENTINEL schedules to 0.18 to 0.28, and the
 integrated $2+2$ and $3+3$ deployments are the best for every policy, with SENTINEL routing 26 to 36\% of its
@@ -200,16 +214,14 @@ report this as a limitation of scheduled transmission at that topology.
 \begin{figure}[!t]
 \centering
 \includegraphics[width=0.8\columnwidth]{figures/capacity_average_aoii.pdf}
-\caption{Median average AoII (IQR over 30 seeds) of the per-slot state-aware policies at 20 UEs as the bandwidth per
-node is reduced. The Whittle-index scheduler and the AoII-threshold policy coincide while capacity does not bind
-and separate below 5~MHz, where uncoordinated threshold transmissions collapse the shared links.}
+\caption{Median average AoII of the Whittle-index and AoII-threshold policies at 20 UEs versus bandwidth per node.}
 \label{fig:capacity}
 \end{figure}
 
 \textbf{Whittle index and capacity.} At the bandwidths of Table~\ref{tab:simulation_parameters} a node delivers 19 to
 40 simultaneous equal sharers within one slot, so capacity never binds and the Whittle scheduler makes the same
 decisions as the threshold policy; their AoII is identical to three decimals at every size and in every topology
-($p\ge0.18$), and the threshold baseline of this paper is the Whittle-index policy of this regime. Fig.~\ref{fig:capacity}
+($p\ge0.18$), and the threshold baseline of this paper is the Whittle-index policy of this regime. Figure~\ref{fig:capacity}
 reduces the bandwidth per node at 20 UEs. At 5~MHz the threshold policy is 57\% worse than the index scheduler
 (0.239 against 0.152, $p=4\times10^{-9}$), and at 2~MHz its simultaneous transmissions collapse every shared link
 (median AoII 33.5, delivery ratio 0.16) while the capacity-aware index scheduler stays at 0.16. SENTINEL's dedicated
@@ -249,10 +261,12 @@ $L=1/3/5/6$, 20 UEs & 60--77 & -- & 0.0/3.2/6.9/0.0 & 74/233/9.0/3.8 & 0/0/1.1/0
 The XY-mixer QAOA returned the exact optimum on every instance whose domains fit the simulator (8 to 24 qubits),
 with 100\% of samples one-hot and capacity-feasible; the epigraph encoding, run with the same classical search, is 38
 to 51\% above the optimum on the same instances with 133 to 193 qubits, and a plain simulated annealer on its penalty
-landscape found no feasible assignment in 50 solves at 10 UEs. The compact distributed pipeline is exact through 25
-UEs and within 12\% at 50; its limit at 75 to 100 UEs is the coordination of five shared satellites among six to eight
+landscape found no feasible assignment in 50 solves at 10 UEs. The compact distributed pipeline matches the exact optimum on all
+10- and 25-UE instances and on the severity instances at 20 UEs, is within 3 to 7\% on the 20-UE scenario-count
+instances (optimal on 60 to 90\% of them, where greedy with local search is also within 1\%), is within 12\% at 50
+UEs, and its limit at 75 to 100 UEs is the coordination of five shared satellites among six to eight
 domains, which neither more ADMM rounds nor smaller dual steps resolve, and where greedy association with local
-search stays within 11 to 14\%. Candidate pruning with $\kappa=4$ never changed the optimum. The exact reference was
+search stays within 11 to 14\%. Candidate pruning with $\varkappa=4$ never changed the optimum. The exact reference was
 solved to proven optimality in under a second on every instance up to 75 UEs and reached its time limit on one in ten
 instances at 100 UEs.
 
@@ -261,8 +275,8 @@ instances at 100 UEs.
 \label{sec:device}
 %-----------------------------------------------------------------------
 
-Table~\ref{tab:hardware} lists the transpiled circuits of the hardware-sized domains (depth 1, greedy warm start,
-optimization level 3, eight routing trials) and the results of sampling them on the \texttt{ibm\_kingston} and
+Table~\ref{tab:hardware} lists the transpiled circuits of the hardware-sized domains ($\varkappa=4$, depth 1, greedy
+warm start, 4096 shots, optimization level 3, eight routing trials) and the results of sampling them on the \texttt{ibm\_kingston} and
 \texttt{ibm\_fez} processors (Heron r2, 156 qubits, 27 and 28 October 2026; job identifiers in the repository).
 Every scenario weight, ADMM target, and QAOA angle was optimized on the simulator; each device job executed only the
 final sampling circuit of one or two domains with 4096 shots, and the campaign used 47~s of processor time. The
@@ -272,7 +286,7 @@ noise models the 18- and 20-qubit domains of the first instance kept 52 and 33\%
 feasible, bracketing the device values.
 \begin{table}[!t]
 \centering
-\caption{Transpiled Circuits ($\kappa=4$, depth 1, greedy start) and Device Sampling Results (4096 shots)}
+\caption{Device Sampling Results on IBM Heron Processors}
 \label{tab:hardware}
 \footnotesize
 \resizebox{\columnwidth}{!}{%
