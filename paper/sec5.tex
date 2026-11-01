@@ -10,10 +10,8 @@ subproblem is encoded as a compact QUBO over its decision variables and a few ca
 constraint enforced by the mixer of the quantum circuit rather than by a penalty. The domains are coordinated through
 the sharing form of ADMM. Every schedule produced at any point of the procedure is certified exactly by its worst-case
 AoII over $\mathscr{L}$, so the procedure can be stopped at any time with a valid guarantee in hand. The procedure is
-hybrid at three levels: the QAOA angles are tuned by a classical optimizer; the scenario weights, the coordination,
-the repair, and the certificate are classical; and a domain whose QUBO exceeds the sampler's capacity is solved by a
-classical one-hot-preserving annealer on the same QUBO. Section~\ref{sec:performance} states which inner solver
-produced each result.
+hybrid at every level, as Section~I describes, and Section~\ref{sec:performance} states which inner solver produced
+each result.
 
 %-----------------------------------------------------------------------
 \subsection{Scenario-Weight Dualization of the Minimax}
@@ -39,9 +37,8 @@ handed to the quantum sampler, with an exponentiated-gradient step on $\mathbf{w
     w^{(t+1)}_\ell &\propto w^{(t)}_\ell \exp\!\bigl(\mu\, c^{(\ell)}(\mathbf{x}^{(t)})/\eta^{(t)}\bigr),
     \label{eq:eg}
 \end{align}
-with step $\mu>0$ and $\mathbf{w}^{(1)}$ uniform, for $T$ outer iterations. The weights move toward the scenarios
-that hurt the current schedule most, and the next inner solve is pulled toward schedules that do better on them.
-Equation~\eqref{eq:cert} is the exact worst-case AoII of $\mathbf{x}^{(t)}$ over $\mathscr{L}$, computed in
+with step $\mu>0$ and $\mathbf{w}^{(1)}$ uniform, for $T$ outer iterations; the weights move toward the scenarios
+that hurt the current schedule most. Equation~\eqref{eq:cert} is the exact worst-case AoII of $\mathbf{x}^{(t)}$ over $\mathscr{L}$, computed in
 $\mathcal{O}(L|\mathscr{U}|)$; SENTINEL returns the iterate with the smallest $\eta^{(t)}$ together with that value as
 its certificate. Because the inner problem~\eqref{eq:inner} has a linear objective, it needs neither the epigraph
 variable nor the scenario slacks of a direct minimax encoding. In our instances those auxiliary registers,
@@ -103,12 +100,11 @@ feasible one-hot assignments.
 
 \begin{proof}
 Over one-hot assignments the cost term lies in $[0,\bar a_k]$. For a feasible assignment whose slack bits represent
-the unused capacity exactly, the penalty vanishes and $F_k\leq\bar a_k+\Gamma_k^{\max}$. For an assignment that
-exceeds the capacity of some node, the residual of that node is a positive integer multiple of $\Delta_\beta$ for
-every choice of slack bits, since the slack is non-negative, so the penalty is at least $\lambda\Delta_\beta^2$ and
-$F_k\geq\lambda\Delta_\beta^2+\Gamma_k^{\min}>\bar a_k+\Gamma_k^{\max}$. No infeasible one-hot assignment is
-therefore a minimizer, and on the feasible set $F_k$ equals the cost plus coordination term once the slack bits are
-chosen to cancel the penalty.
+the unused capacity exactly, the penalty vanishes and $F_k\leq\bar a_k+\Gamma_k^{\max}$. For one that exceeds the
+capacity of some node, the residual is a positive integer multiple of $\Delta_\beta$ for every choice of the
+non-negative slack, so $F_k\geq\lambda\Delta_\beta^2+\Gamma_k^{\min}>\bar a_k+\Gamma_k^{\max}$. No infeasible
+assignment is a minimizer, and on the feasible set $F_k$ equals the cost plus coordination term once the slack bits
+cancel the penalty.
 \end{proof}
 
 The bound is taken over one-hot assignments because that is the subspace the circuit explores. Taking it over the
@@ -129,8 +125,7 @@ and larger below 10 UEs, where the epigraph's fixed registers dominate.
 \emph{Greedy assignment.} The classical reference used throughout, as warm start, as repair, and as the baseline of
 Section~\ref{sec:exact_validation}, processes the UEs of a domain in decreasing order of the spread of their
 candidate costs and gives each its cheapest candidate $v$ by $\bar\psi_v$ whose node still has capacity, falling back
-to the cheapest candidate when none has. It is exact whenever capacity does not bind and no two UEs compete for the
-last units of a node.
+to the cheapest candidate when none has.
 
 %-----------------------------------------------------------------------
 \subsection{Ising Mapping and XY-Mixer QAOA}
@@ -174,8 +169,7 @@ and the angles $(\boldsymbol{\gamma},\boldsymbol{\theta})$ are optimized by a de
 the sampled energy $\langle H_C^{(k)}\rangle$. The sampled bitstrings are decoded classically; samples that are not
 one-hot or exceed a capacity are discarded, and the feasible sample with the smallest value of~\eqref{eq:Fk_compact}
 is returned as $\hat{\mathbf{x}}_k$. When $\hat N_k$ exceeds the capacity of the available device or simulator, the
-inner step is performed by a one-hot-preserving simulated annealer on the same QUBO, which moves one UE's selection
-at a time; Section~VI reports which solver produced each result.
+inner step uses a one-hot-preserving simulated annealer on the same QUBO.
 
 %-----------------------------------------------------------------------
 \subsection{Distributed Coordination}
@@ -195,32 +189,29 @@ updates~\cite{Boyd2011}
     \label{eq:u_update}
 \end{align}
 which lower every target at an overloaded satellite by an equal share of the excess and accumulate the remaining
-violation in the duals. The round ends when the primal residual $\bigl(\sum_{j,k}(b_j(\hat{\mathbf{x}}_k^{(r+1)})
--z_{jk}^{(r+1)})^2\bigr)^{1/2}$ and the dual residual $\lambda_{\mathrm{c}}\bigl(\sum_{j,k}(z_{jk}^{(r+1)}-z_{jk}^{(r)})^2\bigr)^{1/2}$
-fall below a tolerance or after $R_{\max}$ rounds; $\lambda_{\mathrm{c}}$ is adapted by residual balancing.
+violation in the duals. The round ends when the primal and dual residuals fall below a tolerance or after $R_{\max}$ rounds;
+$\lambda_{\mathrm{c}}$ is adapted by residual balancing.
 
 Two details decide whether this loop produces good schedules. The targets are initialized from an uncoupled round
-($\lambda_{\mathrm{c}}=0$) projected onto capacity, not from the equal share $B_j/K_j$: with equal-share targets the two-sided
-coordination term pulls every domain toward using exactly its share of every shared satellite whether it needs it or
-not, and the loop converges after two rounds at schedules we measured to be 60 to 560\% above the optimum at 50 to
-100 UEs. And $\lambda_{\mathrm{c}}$ is scaled to the mean per-UE spread of the weighted costs $\bar\psi_v$, so that one bandwidth unit of
-deviation costs about one typical per-UE cost difference; a generic penalty two orders of magnitude larger makes the
-coordination term the only thing the inner solver sees. If no capacity-feasible network schedule exists when the loop
-stops, a greedy repair moves UEs from overloaded satellites to the candidate with the smallest increase in worst-case
-cost at a node with spare capacity. The complete procedure is Algorithm~\ref{alg:SENTINEL}.
+($\lambda_{\mathrm{c}}=0$) projected onto capacity, not from the equal share $B_j/K_j$, which pulls every domain toward
+using exactly its share of every shared satellite whether it needs it or not and left schedules 60 to 560\% above the
+optimum at 50 to 100 UEs. And $\lambda_{\mathrm{c}}$ is scaled to the mean per-UE spread of the weighted costs
+$\bar\psi_v$, so that one bandwidth unit of deviation costs about one typical per-UE cost difference; a generic penalty
+two orders of magnitude larger makes the coordination term the only thing the inner solver sees. If no
+capacity-feasible network schedule exists when the loop stops, a greedy repair moves UEs from overloaded satellites to
+the candidate with the smallest increase in worst-case cost at a node with spare capacity
+(Algorithm~\ref{alg:SENTINEL}).
 
 \begin{algorithm}[!t]
 \caption{SENTINEL: Distributed Robust Orchestration for VANGUARD}
 \label{alg:SENTINEL}
 \SetKwInOut{Input}{Input}
 \SetKwInOut{Output}{Output}
-\Input{$\mathscr{U},\mathscr{S},\mathscr{B}$, $\{P_i\}$, capacities, budgets, levels, $\Theta$, $\mathscr{L}$,
-$\varkappa$, $T$, $\mu$, $p$, $R_{\max}$, $\epsilon_{\mathrm{tol}}$.}
+\Input{Network, sources, scenario set $\mathscr{L}$, $\varkappa$, $T$, $\mu$, $p$, $R_{\max}$, $\epsilon_{\mathrm{tol}}$.}
 \Output{$\mathbf{x}^{\star}$ decoded into $\rho_i$, $\alpha_{ij}$, $\omega_{in}$, $\beta^{us}_{ij}$,
 $\beta^{ub}_{in}$; certificate $\eta^{\star}$; worst scenario $\ell^{\star}$.}
-\nl Partition the network into $K$ domains; identify shared SATs.\\
-\nl Tabulate $\Psi_i(\cdot)$ by~\eqref{eq:psi_def}, the costs $\psi^{(\ell)}_{imqh}$ by~\eqref{eq:psi_imqh}, the
-    admissible sets $\mathscr{A}_i$ and the pruned candidates $\mathscr{C}_i$.\\
+\nl Partition the network into $K$ domains; tabulate $\Psi_i(\cdot)$ by~\eqref{eq:psi_def}, the costs
+    $\psi^{(\ell)}_{imqh}$ by~\eqref{eq:psi_imqh}, and the candidates $\mathscr{C}_i$.\\
 \nl $\mathbf{w}^{(1)}\leftarrow$ uniform; $\eta^{\star}\leftarrow+\infty$.\\
 \nl \For{$t=1,\ldots,T$}{
 \nl Warm start: solve each domain with $\lambda_{\mathrm{c}}=0$; set $z_{jk}^{(0)}$ to the projected loads, $\upsilon_{jk}^{(0)}\leftarrow 0$;
@@ -256,31 +247,28 @@ its certificate.
 \label{sec:complexity}
 %-----------------------------------------------------------------------
 
-\textbf{Qubits and gates.} By~\eqref{eq:Nk_compact} the qubit count of a domain grows with $\varkappa|\mathscr{U}_k|$ and
-the slack registers, and does not depend on $L$. Because the cost Hamiltonian couples only candidates that share a
-node, the cost layer of domain $k$ needs at most $\sum_{m}\binom{n_{m}+W_m}{2}$ two-qubit $ZZ$ rotations, where
-$n_m$ is the number of candidates at node $m$ in the domain and $W_m=0$ for shared satellites; the XY mixer adds
-$|\mathscr{C}_i|$ two-qubit rotations per UE group and layer, and the $W$-state preparation $|\mathscr{C}_i|-1$. On a
-heavy-hex processor, routing a domain of 18 to 24 qubits yielded 58 to 305 two-qubit gates after transpilation at depth
-1, and 606 gates for a 38-qubit domain (Section~\ref{sec:device}). The direct epigraph encoding, whose scenario penalties couple
-every pair of local variables, needs $\hat N_k(\hat N_k-1)/2$ rotations per layer with $\hat N_k$ four to six times
-larger.
+\textbf{Qubits and gates.} By~\eqref{eq:Nk_compact} the qubit count of a domain grows with
+$\varkappa|\mathscr{U}_k|$ and the slack registers and does not depend on $L$. Because the cost Hamiltonian couples
+only candidates that share a node, the cost layer of domain $k$ needs at most $\sum_{m}\binom{n_{m}+W_m}{2}$ two-qubit
+$ZZ$ rotations, with $n_m$ the number of candidates at node $m$ in the domain and $W_m=0$ for shared satellites; the
+XY mixer adds $|\mathscr{C}_i|$ two-qubit rotations per UE group and layer and the $W$-state preparation
+$|\mathscr{C}_i|-1$. Routed on a heavy-hex processor at depth 1, domains of 18 to 24 qubits took 58 to 305 two-qubit
+gates and a 38-qubit domain 606 (Section~\ref{sec:device}); the epigraph encoding, whose scenario penalties couple
+every pair of local variables, needs $\hat N_k(\hat N_k-1)/2$ per layer with $\hat N_k$ four to six times larger.
 
-\textbf{Time.} Tabulating $\Psi_i$ costs $\mathcal{O}(Y^{\max}|\mathcal{X}_i|^3+|\mathcal{X}_i|(Y^{\max})^2)$ per
-UE and the coefficients $\psi^{(\ell)}_{imqh}$ cost $\mathcal{O}(L\sum_i|\mathscr{A}_i|)$ lookups, once per set of
-sources and scenarios; assembling and mapping $F_k$ costs $\mathcal{O}(\hat N_k^2)$. With $I_{\mathrm{QAOA}}$
-optimizer iterations of $N_{\mathrm{shot}}$ shots, the quantum work of domain $k$ per round is
-$\mathcal{O}(I_{\mathrm{QAOA}}\,p\,N_{\mathrm{shot}}\,G_k)$ with $G_k$ the gate count above, the ADMM updates cost
-$\mathcal{O}(\sum_j K_j)$, and the certificate $\mathcal{O}(L|\mathscr{U}|)$. With the domains in parallel, the
-wall-clock cost of a solve is
+\textbf{Time.} Tabulating $\Psi_i$ costs $\mathcal{O}(Y^{\max}|\mathcal{X}_i|^3+|\mathcal{X}_i|(Y^{\max})^2)$ per UE
+and the coefficients $\mathcal{O}(L\sum_i|\mathscr{A}_i|)$ lookups, once per set of sources and scenarios; assembling
+$F_k$ costs $\mathcal{O}(\hat N_k^2)$, the ADMM updates $\mathcal{O}(\sum_j K_j)$ per round, and the certificate
+$\mathcal{O}(L|\mathscr{U}|)$. With $I_{\mathrm{QAOA}}$ optimizer iterations of $N_{\mathrm{shot}}$ shots and the
+domains in parallel, a solve costs
 \begin{equation}
     C_{\mathrm{SENTINEL}}=\mathcal{O}\!\Bigl(T\,R_{\max}\bigl(I_{\mathrm{QAOA}}\,p\,N_{\mathrm{shot}}\max_k G_k
     +L|\mathscr{U}|\bigr)\Bigr).
     \label{eq:complexity}
 \end{equation}
-In the evaluation a 20-UE solve with $T=6$ and $R_{\max}=20$ took 1 to 7~s on the classical annealer, and the
-orchestration loop used 34 to 223~s of solver time per ten-minute run, which enters the AoII through the overhead
-$\epsilon_i$ of Section~\ref{sec:orchestration} rather than being assumed away. Exhaustive search over $\mathscr{P}_2$ costs
-$\mathcal{O}(L|\mathscr{U}|\prod_i|\mathscr{A}_i|)$ and branch-and-cut on $\mathscr{P}_3$ has the same worst case
-although it is fast on our instances; a centralized QAOA would need $\sum_k\hat N_k$ qubits on one device. The
-advantage of the decomposition is the qubit count per device, not asymptotic time.
+where $G_k$ is the gate count above. In the evaluation a 20-UE solve with $T=6$ and $R_{\max}=20$ took 1 to 7~s on
+the classical annealer, and the orchestration loop used 34 to 223~s of solver time per ten-minute run, which enters
+the AoII through the overhead $\epsilon_i$ of Section~\ref{sec:orchestration}. Exhaustive search over
+$\mathscr{P}_2$ costs $\mathcal{O}(L|\mathscr{U}|\prod_i|\mathscr{A}_i|)$, branch-and-cut on $\mathscr{P}_3$ has
+the same worst case although it is fast on our instances, and a centralized QAOA would need $\sum_k\hat N_k$ qubits
+on one device; the advantage of the decomposition is the qubit count per device, not asymptotic time.

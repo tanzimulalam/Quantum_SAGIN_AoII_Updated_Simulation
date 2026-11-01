@@ -26,15 +26,13 @@ Number of UEs & $\{5,10,15,20\}$; up to 100 in Sec.~\ref{sec:exact_validation} \
 BSs / satellite serving slots & 2 / 2 (topology study: 0 to 3 each) \\
 Area; BS height; UE height & $20\times20$~km$^2$; 25~m; 1.5~m \\
 Satellite passes & Starlink TLE snapshot, SGP4, MTSU site (35.85$^\circ$N, 86.39$^\circ$W); min.\ elevation $25^\circ$ \\
-Domains $K$ & 2 (one BS each; satellites shared) \\
 \hline
 \multicolumn{2}{l}{\emph{Channel and resources}} \\
 UE transmit power & 23~dBm \\
-UE--BS link & 3.5~GHz, 20~MHz, $-147.55+20\log_{10}f+26\log_{10}d+6$~dB, BS gain 15~dBi, NF 7~dB \\
-UE--SAT link & 12~GHz, 50~MHz, free space $+1$~dB, gains 30 $+$ 30~dBi, NF 9~dB \\
+UE--BS link & 3.5~GHz, 20~MHz, $-147.55+20\log_{10}f+26\log_{10}d+6$~dB, gain 15~dBi, NF 7~dB, SE cap 6 \\
+UE--SAT link & 12~GHz, 50~MHz, free space $+1$~dB, gains 30 $+$ 30~dBi, NF 9~dB, SE cap 4 \\
 NTN large-scale model & TR~38.811 suburban (LOS prob., clutter, shadow fading per pass); atm.\ $0.5$~dB$/\sin V$ \\
 Bandwidth levels $\bar\beta^q_m$ ($Q_m=3$) & $\{2.5,5,10\}$~MHz, $\Delta_\beta=2.5$~MHz \\
-Spectral-efficiency cap & 6 (BS), 4 (SAT) bit/s/Hz \\
 \hline
 \multicolumn{2}{l}{\emph{Source and AoII}} \\
 Source states; transition matrix & 4; birth--death, self-transition $\mathcal{U}[0.90,0.99]$ per UE \\
@@ -43,14 +41,13 @@ Update periods ($H_i=4$); slot; packet & $\{5,10,20,50\}$ slots; 10~ms; 20~kbit 
 \hline
 \multicolumn{2}{l}{\emph{Disruption}} \\
 Scenario set ($L=5$) & nominal; deep shadowing 12~dB for 30 slots; handover of each SAT (20 slots); joint loss (30 slots) \\
-Realized process (per 1~s interval) & TR~38.811 state per pass; shadowing event per UE--SAT link w.p.\ 0.07; handover failure per SAT w.p.\ 0.03; natural handovers \\
-Link-failure handling (all policies) & node blocked after 60 failed slots, for 6~s or until its next handover; SENTINEL re-solves \\
+Realized process (per 1~s interval) & TR~38.811 state per pass; shadowing event per link w.p.\ 0.07; handover failure per SAT w.p.\ 0.03 \\
+Link-failure handling (all policies) & node blocked after 60 failed slots, for 6~s or until its next handover \\
 \hline
 \multicolumn{2}{l}{\emph{Solver}} \\
 Formulation & compact dual, $\varkappa=4$, $T=6$ outer iterations, $\mu=2$ \\
 Local solver & XY-QAOA, depth 1, 512 shots, COBYLA 40 it.\ ($\le 26$ qubits); one-hot annealing otherwise \\
 ADMM $\lambda_{\mathrm{c},0}$, tolerance, rounds & scaled to cost spread, $10^{-2}$, 20 \\
-Re-solve & on visibility change, on link failure, at least every 30~s \\
 Quantum backend & Qiskit Aer~\cite{Qiskit2024}; FakeTorino / FakeFez; \texttt{ibm\_kingston}, \texttt{ibm\_fez} \\
 \hline
 \end{tabular}
@@ -83,29 +80,26 @@ $\mathscr{P}_3$ solved with HiGHS~\cite{HiGHS2018}.
 
 \begin{figure}[!t]
 \centering
-\includegraphics[width=0.86\columnwidth]{figures/ue_sweep_average_aoii_median_disruption_on.pdf}
+\includegraphics[width=0.66\columnwidth]{figures/ue_sweep_average_aoii_median_disruption_on.pdf}
 \caption{Median average AoII versus the number of UEs (whiskers: IQR over 30 seeds).}
 \label{fig:ue_sweep}
 \end{figure}
 
 Figure~\ref{fig:ue_sweep} and Table~\ref{tab:tle} give the median average AoII from 5 to 20 UEs. In every
-network-level result of this section the inner solver of Algorithm~1 was the one-hot-preserving annealer: the domains
-of these instances span 12 to 76 qubits and the dual loop re-solves them hundreds of times per run, which the
-statevector sampler cannot sustain. The XY-mixer QAOA is validated against the annealer and the exact optimum on
-domains of up to 24 qubits in Section~\ref{sec:exact_validation} and executed on hardware in
-Section~\ref{sec:device}; the network results are therefore classical except where stated. Three groups are visible. The state-aware per-slot policies, AoII threshold and Whittle index, are lowest at 0.13 to 0.15 and coincide
+network-level result of this section the inner solver of Algorithm~1 was the one-hot-preserving annealer, because
+the domains span 12 to 76 qubits and are re-solved hundreds of times per run; the XY-mixer QAOA is validated against
+it and the exact optimum on domains of up to 24 qubits (Section~\ref{sec:exact_validation}) and run on hardware
+(Section~\ref{sec:device}). Three groups are visible. The state-aware per-slot policies, AoII threshold and Whittle index, are lowest at 0.13 to 0.15 and coincide
 (Section~\ref{sec:topology}). The SENTINEL schedules, robust and nominal, sit at 0.25 to 0.28 and do not grow with the number of
 UEs, because bandwidth levels are dedicated and a re-solve redistributes load as satellites come and go. SENTINEL with
-the state-aware trigger lies between the two at 0.155 to 0.175: it keeps the robust association and bandwidth,
-transmits only when the estimate is wrong, and thereby raises the informative-update ratio from 0.23 to 0.96 while
-retaining the certificate. Random scheduling is at 6; the trained PPO agent is close to the nominal schedule at 5 UEs
+the state-aware trigger lies between the two at 0.155 to 0.175: it keeps the robust association and bandwidth but
+transmits only when the estimate is wrong, raising the informative-update ratio from 0.23 to 0.96. Random scheduling is at 6; the trained PPO agent is close to the nominal schedule at 5 UEs
 (0.280 against 0.253, 11\% worse), degrades to 0.446 at 20 UEs as its action space grows, routes all traffic to
 satellites, and, like SENTINEL, samples without observing the source. Delivery ratios are 0.92 to 0.94 for every policy except random;
-the per-slot policies deliver with 2.8 to 3.0~ms of end-to-end latency against 4.7 to 5.8~ms for the SENTINEL
-schedules, whose dedicated levels are smaller than an equal share of an otherwise idle node. The satellite tier
-carries 73 to 79\% of robust SENTINEL's deliveries and 97 to 98\% of the threshold policy's. Peak AoII is 100 to 400
-for every policy and is set by handover interruptions and non-line-of-sight passes rather than by the scheduler. A
-20-UE solve used 20 to 58 qubits per domain and the orchestration loop 34 to 223~s of solver time per run.
+the per-slot policies deliver in 2.8 to 3.0~ms against 4.7 to 5.8~ms for the SENTINEL schedules, whose dedicated
+bandwidth levels are smaller than an equal share of an idle node. The satellite tier
+carries 73 to 79\% of robust SENTINEL's deliveries and 97 to 98\% of the threshold policy's; peak AoII is 100 to 400
+for every policy, set by handovers and non-line-of-sight passes rather than by the scheduler.
 
 \begin{table}[!t]
 \centering
@@ -133,7 +127,7 @@ for every policy and is set by handover interruptions and non-line-of-sight pass
 
 \begin{figure}[!t]
 \centering
-\includegraphics[width=0.78\columnwidth]{figures/certificate_vs_realized.pdf}
+\includegraphics[width=0.58\columnwidth]{figures/certificate_vs_realized.pdf}
 \caption{Certified worst-case AoII versus realized average AoII per orchestration run, robust and nominal SENTINEL.}
 \label{fig:certificate}
 \end{figure}
@@ -141,19 +135,16 @@ for every policy and is set by handover interruptions and non-line-of-sight pass
 Figure~\ref{fig:certificate} plots, for every run, the time-weighted certified worst case against the realized
 average AoII; the per-epoch statistic is reported in the text. The realized average stayed within the certificate in
 98.7\% of orchestration epochs for the robust schedule and 98.5\% for the nominal one; the violations are passes that
-enter the non-line-of-sight state, whose 17 to 25~dB clutter loss exceeds the 12~dB deep-shadowing scenario. With a
-synthetic pass model that produces coverage gaps longer than any scenario window the figure was 98.0\%, and every
-violation there was such a gap. The certificate is valid against the scenario set it was computed from, and it is
+enter the non-line-of-sight state, whose 17 to 25~dB clutter loss exceeds the 12~dB deep-shadowing scenario. The certificate is valid against the scenario set it was computed from, and it is
 conservative: the certified worst case exceeds the realized average by a factor of 12 to 20 (median 15.5 over runs),
 because every scenario applies its outage to every inter-delivery interval of the epoch, which amounts to a
-persistent disruption, whereas realized disruptions are intermittent. Per epoch, the ratio of certified to realized AoII has a median of 17
-(interquartile range 13 to 23) across 3975 epochs of 120 runs, and the violations, 1.3\% of epochs, are not marginal:
-when a blocked pass defeats the bound, the realized AoII exceeds the certificate by a factor of 1.2 to 2.1 at the median
-and up to 5.4, so the certificate should be read as a guarantee against the scenario set rather than as a prediction
-of typical behaviour. The certificate is proved for the
+persistent disruption, whereas realized disruptions are intermittent. Per epoch the certified-to-realized ratio has median 17 (IQR 13 to 23) over 3975
+epochs, and the 1.3\% of violating epochs are not marginal: a blocked pass pushes realized AoII to 1.2 to 2.1 times
+the certificate at the median and up to 5.4 times, so the certificate is a guarantee against the scenario set, not a
+prediction of typical behaviour. The certificate is proved for the
 periodic schedule, whose deliveries do not depend on the source state; the triggered variant transmits on observed
-mismatch, so the renewal argument of Section~\ref{sec:renewal} does not cover it, and we check it empirically: its
-realized average stayed within the certificate of the schedule it runs on in 97.9 to 98.7\% of epochs.
+mismatch, which the renewal argument of Section~\ref{sec:renewal} does not cover, so we check it empirically: its
+realized average stayed within the certificate of its schedule in 97.9 to 98.7\% of epochs.
 
 What the scenario set buys is visible in the certificate, not in the realized AoII. Across the 30 paired seeds the
 robust schedule's certified worst case is 2 to 7\% below the nominal schedule's (paired-median ratio 0.93 at 5 UEs to
@@ -165,14 +156,14 @@ significant at every size ($p\le0.013$), and PPO is significantly behind SENTINE
 
 \begin{figure}[!t]
 \centering
-\includegraphics[width=0.86\columnwidth]{figures/noack_ue_sweep_average_aoii_median.pdf}
+\includegraphics[width=0.7\columnwidth]{figures/noack_ue_sweep_average_aoii_median.pdf}
 \caption{Median average AoII without acknowledgement feedback or link-failure handling (60 seeds).}
 \label{fig:noack}
 \end{figure}
 
 \textbf{Without failure feedback.} Whether the network can react to a dead link matters more than any scheduling
 choice. Figure~\ref{fig:noack} repeats the sweep with the link-failure rule disabled for every policy, on 60 seeds
-because the distributions become heavy-tailed. Median AoII rises by an order of magnitude for all policies, the
+because the distributions become heavy-tailed: median AoII rises by an order of magnitude for all policies, the
 certificate holds in 87 to 92\% of epochs, and the threshold and Whittle-index policies, which coincide here as well
 and concentrate 98\% of their traffic on the best nominal satellite, tie the SENTINEL schedules at 5 and 10 UEs and
 fall 25 to 30\% behind SENTINEL with the trigger at 15 and 20 UEs (Hodges-Lehmann differences $-0.77$ and $-0.71$,
@@ -182,12 +173,11 @@ indistinguishable in realized AoII here as well ($p\ge0.41$). The measurable pro
 thus its lower certificate, obtained in both regimes, and the measurable value of a scheduled base-station share
 appears when feedback is absent.
 
-\textbf{Scenario-set size.} To see which scenarios matter, the list was extended by a mild 6~dB shadowing scenario and
-truncated to $L=1,\ldots,6$ at 10 UEs. Realized AoII is flat in $L$ (0.265 to 0.278); the certificate and the
-base-station hedge move only once the handover of the second shared satellite enters the set, the certified worst
-case falling from 4.57 to 4.28 and the satellite share from 0.79 to 0.74 between $L=4$ and $L=5$. The mild scenario
-never binds: removing it from the full set leaves the certified worst case of every schedule unchanged on all 30 seeds
-at every size, with realized-AoII differences below $10^{-3}$, which is why the paper's scenario set has five members.
+\textbf{Scenario-set size.} With the list extended by a mild 6~dB shadowing scenario and truncated to
+$L=1,\ldots,6$ at 10 UEs, realized AoII is flat in $L$ (0.265 to 0.278), and the certificate and the base-station
+hedge move only once the handover of the second shared satellite enters the set (certified worst case 4.57 to 4.28,
+satellite share 0.79 to 0.74 between $L=4$ and $L=5$). The mild scenario never binds: removing it leaves every
+schedule's certificate unchanged on all 30 seeds at every size, which is why the paper's set has five members.
 
 %-----------------------------------------------------------------------
 \subsection{Topology, the Whittle Index, and Capacity}
@@ -196,7 +186,7 @@ at every size, with realized-AoII differences below $10^{-3}$, which is why the 
 
 \begin{figure}[!t]
 \centering
-\includegraphics[width=0.86\columnwidth]{figures/topology_average_aoii_median.pdf}
+\includegraphics[width=0.66\columnwidth]{figures/topology_average_aoii_median.pdf}
 \caption{Median average AoII at 10 UEs by deployment (log scale).}
 \label{fig:topology}
 \end{figure}
@@ -207,27 +197,26 @@ serving slots alone bring the per-slot policies to 0.14 and the SENTINEL schedul
 integrated $2+2$ and $3+3$ deployments are the best for every policy, with SENTINEL routing 26 to 36\% of its
 deliveries to base stations. The one deployment in which the SENTINEL schedules are clearly worse than the per-slot
 policies is a single base station with a single satellite slot (medians 1.6 to 1.9 against 0.87 to 0.90, and 5.4 for
-the triggered hybrid): with one slot, every natural handover is a total outage for every UE on it, and a periodic or
-rate-capped schedule loses more during the recovery than a policy that retransmits the moment the link returns. We
-report this as a limitation of scheduled transmission at that topology.
+the triggered hybrid): with one slot every handover is a total outage for every UE on it, and a scheduled policy
+loses more during the recovery than one that retransmits the moment the link returns; this is a limitation of
+scheduled transmission at that topology.
 
 \begin{figure}[!t]
 \centering
-\includegraphics[width=0.8\columnwidth]{figures/capacity_average_aoii.pdf}
+\includegraphics[width=0.62\columnwidth]{figures/capacity_average_aoii.pdf}
 \caption{Median average AoII of the Whittle-index and AoII-threshold policies at 20 UEs versus bandwidth per node.}
 \label{fig:capacity}
 \end{figure}
 
 \textbf{Whittle index and capacity.} At the bandwidths of Table~\ref{tab:simulation_parameters} a node delivers 19 to
 40 simultaneous equal sharers within one slot, so capacity never binds and the Whittle scheduler makes the same
-decisions as the threshold policy; their AoII is identical to three decimals at every size and in every topology
-($p\ge0.18$), and the threshold baseline of this paper is the Whittle-index policy of this regime. Figure~\ref{fig:capacity}
-reduces the bandwidth per node at 20 UEs. At 5~MHz the threshold policy is 57\% worse than the index scheduler
-(0.239 against 0.152, $p=4\times10^{-9}$), and at 2~MHz its simultaneous transmissions collapse every shared link
-(median AoII 33.5, delivery ratio 0.16) while the capacity-aware index scheduler stays at 0.16. SENTINEL's dedicated
-bandwidth levels avoid this regime by construction. The index scheduler's one weakness is the ground-only
-deployment, where its admission rule never attempts a node that cannot deliver at the nominal rate and the
-threshold policy's blind attempts occasionally succeed on a fading upswing (81 against 63).
+decisions as the threshold policy (identical AoII to three decimals at every size and topology, $p\ge0.18$); the
+threshold baseline of this paper is the Whittle-index policy of this regime. Figure~\ref{fig:capacity} reduces the
+bandwidth per node at 20 UEs: at 5~MHz the threshold policy is 57\% worse than the index scheduler (0.239 against
+0.152, $p=4\times10^{-9}$), and at 2~MHz its simultaneous transmissions collapse every shared link (median AoII 33.5,
+delivery ratio 0.16) while the capacity-aware scheduler stays at 0.16; SENTINEL's dedicated bandwidth levels avoid
+this regime by construction. Its one weakness is the ground-only deployment (81 against 63), where its admission rule
+never attempts a node that cannot deliver at the nominal rate.
 
 %-----------------------------------------------------------------------
 \subsection{Validation Against the Exact Minimax Optimum}
@@ -263,74 +252,56 @@ with 100\% of samples one-hot and capacity-feasible; the epigraph encoding, run 
 to 51\% above the optimum on the same instances with 133 to 193 qubits, and a plain simulated annealer on its penalty
 landscape found no feasible assignment in 50 solves at 10 UEs. The compact distributed pipeline matches the exact optimum on all
 10- and 25-UE instances and on the severity instances at 20 UEs, is within 3 to 7\% on the 20-UE scenario-count
-instances (optimal on 60 to 90\% of them, where greedy with local search is also within 1\%), is within 12\% at 50
-UEs, and its limit at 75 to 100 UEs is the coordination of five shared satellites among six to eight
-domains, which neither more ADMM rounds nor smaller dual steps resolve, and where greedy association with local
-search stays within 11 to 14\%. Candidate pruning with $\varkappa=4$ never changed the optimum. The exact reference was
-solved to proven optimality in under a second on every instance up to 75 UEs and reached its time limit on one in ten
-instances at 100 UEs.
+instances (optimal on 60 to 90\% of them), is within 12\% at 50 UEs, and is limited at 75 to 100 UEs by the
+coordination of five shared satellites among six to eight domains, which neither more ADMM rounds nor smaller dual
+steps resolve and where greedy association with local search stays within 11 to 14\%. Pruning with $\varkappa=4$
+never changed the optimum. The exact reference was solved to proven optimality in under a second up to 75 UEs and hit
+its time limit on one in ten instances at 100 UEs.
 
 %-----------------------------------------------------------------------
 \subsection{Quantum Resources and Device Results}
 \label{sec:device}
 %-----------------------------------------------------------------------
 
-Table~\ref{tab:hardware} lists the transpiled circuits of the hardware-sized domains ($\varkappa=4$, depth 1, greedy
-warm start, 4096 shots, optimization level 3, eight routing trials) and the results of sampling them on the \texttt{ibm\_kingston} and
-\texttt{ibm\_fez} processors (Heron r2, 156 qubits, 27 and 28 October 2026; job identifiers in the repository).
-Every scenario weight, ADMM target, and QAOA angle was optimized on the simulator; each device job executed only the
-final sampling circuit of one or two domains with 4096 shots, and the campaign used 47~s of processor time. The
-38-qubit domain exceeds the statevector simulator and received the angles of the largest simulated domain of its run,
-relying on the concentration of QAOA parameters across instances~\cite{Brandao2018}. On the FakeTorino and FakeFez
-noise models the 18- and 20-qubit domains of the first instance kept 52 and 33\%, and 70 and 48\%, of their shots
-feasible, bracketing the device values.
-\begin{table}[!t]
-\centering
-\caption{Device Sampling Results on IBM Heron Processors}
-\label{tab:hardware}
-\footnotesize
-\resizebox{\columnwidth}{!}{%
-\begin{tabular}{|l|c|c|c|l|c|c|}
-\hline
-\textbf{Instance} & \textbf{Dom.} & \textbf{Qubits} & \textbf{2q gates / depth} & \textbf{Device} & \textbf{Feasible shots} & \textbf{Best = opt.} \\
-\hline
-6 UEs, s1 & 0 & 18 & 139 / 187 & \texttt{ibm\_kingston} & 63.3\% & yes \\
-6 UEs, s1 & 1 & 20 & 301 / 428 & \texttt{ibm\_kingston} & 42.7\% & yes \\
-6 UEs, s2 & 0 & 18 & 139 / 187 & \texttt{ibm\_kingston} & 60.9\% & yes \\
-6 UEs, s2 & 1 & 12 & 58 / 76 & \texttt{ibm\_kingston} & 73.5\% & yes \\
-6 UEs, s3 & 0 & 24 & 305 / 387 & \texttt{ibm\_kingston} & 34.8\% & yes \\
-6 UEs, s3 & 1 & 14 & 120 / 187 & \texttt{ibm\_kingston} & 69.6\% & yes \\
-6 UEs, s5 & 0 & 12 & 58 / 74 & \texttt{ibm\_kingston} & 75.9\% & yes \\
-6 UEs, s5 & 1 & 12 & 58 / 74 & \texttt{ibm\_kingston} & 76.4\% & yes \\
-6 UEs, s6 & 0 & 8 & 38 / 77 & \texttt{ibm\_fez} & 86.5\% & yes \\
-6 UEs, s6 & 1 & 16 & 79 / 77 & \texttt{ibm\_fez} & 61.8\% & yes \\
-6 UEs, s7 & 0 & 12 & 58 / 76 & \texttt{ibm\_fez} & 71.9\% & yes \\
-6 UEs, s7 & 1 & 18 & 142 / 171 & \texttt{ibm\_fez} & 59.4\% & yes \\
-10 UEs, s1 & 0 & 38 & 606 / 626 & \texttt{ibm\_kingston} & 2.6\% & yes \\
-\hline
-\end{tabular}%
-}
-\end{table}
+Table~\ref{tab:hardware} reports the sampling of the hardware-sized domains on the \texttt{ibm\_kingston} and
+\texttt{ibm\_fez} processors (Heron r2, 156 qubits; $\varkappa=4$, depth 1, 4096 shots per domain, transpiled at
+optimization level 3 with eight routing trials; 27 October to 1 November 2026).
+Every scenario weight, ADMM target, and QAOA angle was optimized on the simulator and each device job executed only
+the final sampling circuit of one or two domains; the 38-qubit domain exceeds the statevector simulator and received
+the angles of the largest simulated domain of its run, relying on parameter concentration~\cite{Brandao2018}. Two
+statistics are reported per domain against the baseline of uniform sampling of the domain's feasible one-hot set,
+which we enumerate: the probability that a single shot is an optimal assignment, and the
+probability of the optimum among the feasible shots. The energy spread of the feasible set (worst feasible cost over
+the optimum, minus one) is listed because several hardware-sized domains are nearly flat: where it is below 2\%, any
+feasible assignment is within 2\% of the optimum and the sampler only has to achieve feasibility; on the other domains
+it is 35 to 307\%, and uniform sampling reaches an approximation ratio of only 0.62 to 0.91.
 
-Device noise breaks the one-hot structure or the capacity of a part of the shots, which the decoder discards. In all
-thirteen domains the best surviving sample equals the noiseless optimum, and every decoded network schedule attains
-the exact ILP optimum of its instance. The feasible-shot fraction is the honest measure of the noise: 60 to 86\% at 8
-to 18 qubits with up to 139 two-qubit gates, 35 to 43\% at 20 to 24 qubits with about 300 gates, and 2.6\% at 38
-qubits with 606 gates. At the 38-qubit scale the device still contains the optimum among 4096 shots, but a few hundred
-more two-qubit gates would leave fewer than one feasible shot in a thousand, which places the present limit of the
-quantum step at about ten UEs per domain at depth 1. Error suppression does not move it: re-sampling the 24- and
-38-qubit domains in one calibration session with dynamical decoupling (XY4)~\cite{Viola1999}, and with dynamical
-decoupling plus Pauli twirling~\cite{Wallman2016}, lowered the feasible fraction from the in-session control values of
-25.0\% and 2.4\% to 21.1\% and 0.7\%, and to 13.8\% and 0.2\%; these circuits have almost no idle time, so decoupling
-pulses add gate error without cancelling idle dephasing, and twirling inserts further single-qubit gates. The best
-sample equalled the optimum in every one of those runs. The unmitigated yield of the same circuit also varied by about
-ten points between calibration sessions (34.8\% against 25.0\%), so every device comparison here is made within one
-session.
+\input{table_hardware}
 
-On every hardware-sized domain the greedy assignment is already optimal, and the QAOA layers only concentrate a
-constrained sampler: from the $W$ state one layer raises the probability of drawing an optimal assignment from the
-uniform 0.22 to 0.28 and two layers to 0.42, independently of the shot count above 128, and from the greedy basis
-state the optimum is retained with probability 0.99 at depth 1. We therefore claim no quantum advantage. The instances
-on which greedy association is suboptimal, 50 UEs and above in Table~\ref{tab:optimality_gap}, need 140 to 200 qubits
-per domain, beyond simulation and beyond the gate budget the feasible-shot fractions above allow on current devices;
-whether a sampler at that size concentrates on the optimal set is the question this work leaves open.
+Three facts follow from the table. First, from the greedy warm start, which is itself optimal on every hardware-sized
+domain, the device returned an optimal assignment in 32 to 85\% of all shots on the 6-UE domains, 91 to 99\% of the
+feasible shots, against 1.6 to 25\% for uniform feasible sampling. This measures the retention of an already-optimal
+warm start under noise, not a search, and we state it that way. Second, at 38 qubits the per-shot probability of the
+optimum, 0.6\%, equals the uniform baseline: noise destroys 97\% of the shots, and only among the surviving feasible
+shots does the warm start still show (24\% optimal against 0.6\%). The best feasible sample equalled the exact optimum
+of its domain in every run and every decoded schedule attained the ILP optimum of its instance, but at 38 qubits this
+is what 4096 uniform feasible samples would also achieve. Third, from the $W$ state, with no warm start, WSTATE-TEXT
+
+The feasible-shot fraction measures the noise: 60 to 86\% at 8 to 18 qubits with up to 142 two-qubit gates, 35 to 43\%
+at 20 to 24 qubits with about 300 gates, and 2.6\% at 38 qubits with 606 gates, bracketed by the FakeTorino and FakeFez noise
+models (52/33\% and 70/48\% on the 18- and 20-qubit domains of the first instance).
+A few hundred more two-qubit gates would leave fewer than one feasible shot in a thousand, which places the present
+limit of the quantum step at about ten UEs per domain at depth 1. Error suppression does not move it: re-sampling the
+24- and 38-qubit domains in one calibration session with dynamical decoupling (XY4)~\cite{Viola1999}, and with
+dynamical decoupling plus Pauli twirling~\cite{Wallman2016}, lowered the feasible fraction from the in-session control
+values of 25.0\% and 2.4\% to 21.1\% and 0.7\%, and to 13.8\% and 0.2\%, because these circuits have almost no idle time
+in which decoupling could help and twirling inserts further gates. The unmitigated yield of the same circuit also
+varied by about ten points between calibration sessions (34.8\% against 25.0\%), so every device comparison here is
+made within one session.
+
+We therefore claim no quantum advantage. In simulation the QAOA layers only concentrate a constrained sampler, from
+the uniform 0.22 to 0.28 at depth 1 and 0.42 at depth 2 from the $W$ state, and on every hardware-sized domain greedy
+association is already optimal. The instances on which it is not, 50 UEs and above in Table~\ref{tab:optimality_gap},
+need 140 to 200 qubits per domain, beyond simulation and beyond the gate budget that the feasible-shot fractions
+above allow on current devices; whether a sampler at that size concentrates on the optimal set is the question this
+work leaves open.
