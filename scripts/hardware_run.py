@@ -15,6 +15,9 @@ Modes
                         from qiskit_ibm_runtime import QiskitRuntimeService
                         QiskitRuntimeService.save_account(channel="ibm_quantum_platform", token="<your token>", overwrite=True)
                     This script never reads or stores tokens itself.
+  --job-id ID       with --mode device: retrieve a finished job by id instead of submitting one, with the arguments
+                    of the original submission (the circuits are re-transpiled with the same seed and checked
+                    against the stored results); for a submitting process that lost its connection
 
 Outputs: results/hardware/<tag>/  (instance.json, circuits.qpy, counts_*.json, summary.json, summary.md)
 """
@@ -117,6 +120,8 @@ def main():
     ap.add_argument("--tag", default=None)
     ap.add_argument("--init", choices=["w", "greedy"], default="greedy", help="initial state: W state per UE or the greedy basis state")
     ap.add_argument("--domains", default="all", help="comma-separated domain indices to sample on the device (default all)")
+    ap.add_argument("--job-id", default=None,
+                    help="retrieve this finished Sampler job instead of submitting one (--mode device; pass the same arguments as the original submission)")
     ap.add_argument("--max-sim-qubits", type=int, default=26, help="largest domain optimized on the statevector simulator; larger domains get transferred angles")
     ap.add_argument("--transfer-from", default=None, help="results/hardware/<tag> whose largest simulated domain donates angles to oversized domains")
     ap.add_argument("--sat-bw-mhz", type=float, default=None, help="satellite bandwidth capacity (default: config, 50 MHz); smaller values make capacity bind")
@@ -202,19 +207,46 @@ def main():
             sampler.options.twirling.enable_gates = True
             sampler.options.twirling.enable_measure = True
             sampler.options.twirling.num_randomizations = "auto"
-        job = sampler.run(circuits, shots=args.shots)
-        print("job id:", job.job_id(), flush=True)
+        if args.job_id:
+            # A finished job whose submitting process lost the connection: retrieve it by id. The circuits above are
+            # re-transpiled with the same seed, so the gate counts and decoding match the submitted job.
+            job = service.job(args.job_id)
+            if job.backend().name != backend.name:
+                raise SystemExit(f"job {args.job_id} ran on {job.backend().name}, not {backend.name}")
+            print("retrieving job id:", job.job_id(), "status:", job.status(), flush=True)
+            summary["retrieved_job"] = True
+            try:
+                summary["job_timestamps"] = job.metrics().get("timestamps", {})
+            except Exception:
+                pass
+        else:
+            job = sampler.run(circuits, shots=args.shots)
+            print("job id:", job.job_id(), flush=True)
         job_result = job.result()
+        if len(job_result) != len(domains):
+            raise SystemExit(f"job returned {len(job_result)} results for {len(domains)} circuits")
         results = []
-        for pub in job_result:
+        for pub, d in zip(job_result, domains):
             counts = pub.data.meas.get_counts()
+            nbits = len(next(iter(counts)))
+            if nbits != d["dq"].n:
+                raise SystemExit(f"domain {d['k']}: job bitstrings have {nbits} bits, circuit has {d['dq'].n} qubits")
             results.append(counts)
         summary["job_id"] = job.job_id()
         try:
             summary["usage_s"] = job.usage()
         except Exception:
             pass
-    if not args.reanalyze:
+    if args.job_id:
+        # device time from the job metrics (running -> finished) rather than the retrieval time
+        try:
+            from datetime import datetime
+            ts = summary["job_timestamps"]
+            iso = lambda s: datetime.fromisoformat(s.replace("Z", "+00:00"))
+            summary["sampling_wall_s"] = (iso(ts["finished"]) - iso(ts["running"])).total_seconds()
+        except Exception:
+            summary["sampling_wall_s"] = None
+    elif not args.reanalyze:
         summary["sampling_wall_s"] = time.time() - t0
 
     # decode and certify

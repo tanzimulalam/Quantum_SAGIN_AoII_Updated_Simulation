@@ -84,7 +84,7 @@ Hardware (IBM Quantum Open Plan). Everything is optimized on the simulator; the 
 .venv/Scripts/python.exe scripts/hardware_run.py --mode device --ues 6 --domains 0 --mitigation dd_twirl   # with dynamical decoupling and Pauli twirling
 ```
 
-`--init w` samples from the W state instead of the greedy warm start; `--reanalyze` recomputes the per-shot statistics of a saved run
+`--init w` samples from the W state instead of the greedy warm start; `--reanalyze` recomputes the per-shot statistics of a saved run; `--job-id ID` retrieves a finished device job by id instead of submitting one (pass the arguments of the original submission)
 from its counts without touching the device (`--dual-solver qaoa_xy` reproduces the QUBOs of runs made before 28 Oct 2026).
 Domains above `--max-sim-qubits` (default 26) cannot be optimized on the statevector simulator; the runner transfers the
 angles of the largest simulated domain to them and records `params_source` in the summary.

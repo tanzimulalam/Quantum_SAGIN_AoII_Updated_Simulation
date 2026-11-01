@@ -3,7 +3,7 @@
 \label{sec:performance}
 %=======================================================================
 
-We evaluate SENTINEL with the simulator released with this paper\footnote{\url{https://github.com/tanzimulalam/Quantum_SAGIN_AoII_Updated_Simulation}, tag \texttt{v2.3.2-manuscript}; the script \texttt{scripts/reproduce\_all.sh} regenerates every table and figure.}
+We evaluate SENTINEL with the simulator released with this paper\footnote{\url{https://github.com/tanzimulalam/Quantum_SAGIN_AoII_Updated_Simulation}, tag \texttt{v2.3.3-manuscript}; the script \texttt{scripts/reproduce\_all.sh} regenerates every table and figure.}
 under the parameters of Table~\ref{tab:simulation_parameters}, which are the values used for every figure. Each
 configuration runs for 60{,}000 slots of 10~ms, ten minutes of network time, on 30 independent seeds; the policies of
 one seed share its topology, source trajectories, fading, and disruption realization, so all comparisons are paired.
@@ -284,12 +284,11 @@ warm start under noise, not a search, and we state it that way. Second, at 38 qu
 optimum, 0.6\%, equals the uniform baseline: noise destroys 97\% of the shots, and only among the surviving feasible
 shots does the warm start still show (24\% optimal against 0.6\%). The best feasible sample equalled the exact optimum
 of its domain in every run and every decoded schedule attained the ILP optimum of its instance, but at 38 qubits this
-is what 4096 uniform feasible samples would also achieve. Third, from the $W$ state, with no warm start, run on the same processor as the greedy start (seed 1 on
-\texttt{ibm\_fez}), the device is a uniform sampler of the
+is what 4096 uniform feasible samples would also achieve. Third, from the $W$ state, with no warm start, run on the same processor as the greedy start, the device is a uniform sampler of the
 feasible set: the probability of the optimum among feasible shots is 0.03 to 0.33 against the uniform 0.06 to 0.25 of
 the same run (each run re-solves the scenario weights, and on the two seed-2 domains this changes the optimal set, so
-the table lists the baseline per run), within a factor of 0.5 to 2 of it on every 6-UE domain, and the approximation
-ratio of feasible shots exceeds the uniform value by less than 0.05; at 38 qubits no feasible shot was optimal. The 1.3-fold concentration of one
+the table lists the baseline per run), between 0.52 and 2.04 times the uniform value on every 6-UE domain, and the
+approximation ratio of feasible shots exceeds the uniform value by at most 0.07; at 38 qubits no feasible shot was optimal. The 1.3-fold concentration of one
 noiseless layer is lost to hardware noise. Every decoded schedule still attained the ILP optimum of its instance
 (at 38 qubits the best domain sample was suboptimal but tied at the network worst case), because the feasible sets
 are small and the decoder keeps the best of thousands of shots.

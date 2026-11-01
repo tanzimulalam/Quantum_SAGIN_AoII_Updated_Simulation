@@ -6,8 +6,10 @@
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | device_U6_k4_p1_s1_w_fez | ibm_fez | w | none | 6 | 1 | 0 | 18 | 179 | 40.1% | 0.063 | 0.158 | 0.908 | 0.125 | 0.894 | 42.7% | yes | +0.00% | 4.0 | dbjfspt6p51s73ckoagg |
 | device_U6_k4_p1_s1_greedy | ibm_kingston | greedy | none | 6 | 1 | 0 | 18 | 139 | 63.3% | 0.603 | 0.953 | 0.996 | 0.125 | 0.894 | 42.8% | yes | +0.00% | 3.0 | dbgjgr9t9uhs73c8act0 |
+| device_U6_k4_p1_s1_w | ibm_kingston | w | none | 6 | 1 | 0 | 18 | 179 | 61.6% | 0.105 | 0.171 | 0.917 | 0.125 | 0.894 | 42.7% | yes | +0.00% | 4.0 | dbjcjbhkdqps7390bch0 |
 | device_U6_k4_p1_s1_w_fez | ibm_fez | w | none | 6 | 1 | 1 | 20 | 314 | 16.1% | 0.028 | 0.173 | 0.665 | 0.125 | 0.623 | 307.1% | yes | +0.00% | 4.0 | dbjfspt6p51s73ckoagg |
 | device_U6_k4_p1_s1_greedy_d1 | ibm_kingston | greedy | none | 6 | 1 | 1 | 20 | 301 | 42.7% | 0.396 | 0.928 | 0.979 | 0.125 | 0.623 | 307.3% | yes | +0.00% | 3.0 | dbgjjopq260s73btdpl0 |
+| device_U6_k4_p1_s1_w | ibm_kingston | w | none | 6 | 1 | 1 | 20 | 314 | 36.2% | 0.055 | 0.152 | 0.693 | 0.125 | 0.623 | 307.1% | yes | +0.00% | 4.0 | dbjcjbhkdqps7390bch0 |
 | device_U6_k4_p1_s2_w_fez | ibm_fez | w | none | 6 | 2 | 0 | 18 | 179 | 40.2% | 0.036 | 0.089 | 0.927 | 0.125 | 0.909 | 34.6% | yes | +0.00% | 0.0 | dbjfst1kdqps7390h29g |
 | device_U6_k4_p1_s2_greedy | ibm_kingston | greedy | none | 6 | 2 | 0 | 18 | 139 | 60.9% | 0.580 | 0.952 | 0.997 | 0.031 | 0.909 | 34.7% | yes | +0.00% | 4.0 | dbgjk11q260s73btdqa0 |
 | device_U6_k4_p1_s2_w | ibm_kingston | w | none | 6 | 2 | 0 | 18 | 179 | 62.1% | 0.055 | 0.088 | 0.925 | 0.125 | 0.909 | 34.6% | yes | +0.00% | 0.0 | dbjeag0nceqs73ajs610 |
@@ -48,7 +50,7 @@
 | device_U10_k4_p1_s1_greedy_ddtwirl | ibm_kingston | greedy | dd_twirl | 10 | 1 | 0 | 38 | 606 | 0.2% | 0.000 | 0.100 | 0.873 | 0.006 | 0.790 | 82.0% | yes | +0.00% | 3.0 | dbgnfp0te5oc738ihpg0 |
 | device_U10_k4_p1_s1_w | ibm_kingston | w | none | 10 | 1 | 0 | 38 | 719 | 3.5% | 0.000 | 0.000 | 0.821 | 0.006 | 0.790 | 82.0% | no | +0.00% | 0.0 | dbjeaod6p51s73ckm38g |
 
-Device domains sampled: 43; best sample equals the noiseless optimum in 41 of 43; total QPU time 59 s over 27 jobs; feasible-shot fraction 0.2% to 86.5%.
+Device domains sampled: 45; best sample equals the noiseless optimum in 43 of 45; total QPU time 63 s over 28 jobs; feasible-shot fraction 0.2% to 86.5%.
 
 ## Noise models (offline)
 

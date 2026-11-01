@@ -515,12 +515,15 @@ schedule optimum is reached because the decoder keeps the best of thousands of s
 ### W-state device runs replicated on ibm_kingston, 1 November 2026 (`scripts/device_batch_wstate_parallel.sh`)
 
 The same W-state jobs on ibm_kingston, the processor of the greedy-start runs for seeds 1 to 5 and the 10-UE instance,
-completed for seeds 2, 3, 5, 6, 7 and the 10-UE instance after about ten hours in the queue (seed 1 still queued at the
-time of writing). Feasible-shot fraction 34 to 81% on the 6-UE domains and 3.5% at 38 qubits, the same as the
+completed after nine to ten hours in the queue. The seed-1 job finished on the service, but the process that submitted
+it never received the result; it was retrieved by job id with `hardware_run.py --job-id`, which re-transpiles the
+circuits with the same seed, checks the backend and bitstring widths, and decodes the stored counts. Feasible-shot
+fraction 34 to 81% on the 6-UE domains and 3.5% at 38 qubits, the same as the
 greedy-start circuits on the same processor despite 13 to 113 more two-qubit gates for the W-state preparation, so the
 lower ibm_fez fractions above are a device effect, not a depth effect. P(optimal | feasible shot) 0.03 to 0.37 against
-uniform 0.06 to 0.25 (ratio 0.51 to 2.26); mean approximation ratio of feasible shots within +0.00 to +0.04 of the
-uniform value; at 38 qubits no feasible shot was optimal (approximation ratio 0.82 against 0.79 uniform). Every decoded
+uniform 0.06 to 0.25 (ratio 0.52 to 2.24); mean approximation ratio of feasible shots within +0.00 to +0.07 of the
+uniform value (the +0.07 is the 20-qubit seed-1 domain, whose feasible set has the widest energy spread, 307%); at 38 qubits no feasible shot was optimal (approximation ratio 0.82 against 0.79 uniform). Every decoded
 schedule attained the ILP optimum. The paper's device table pairs each greedy-start run with the W-state run on the
-same processor (ibm_kingston for seeds 2, 3, 5 and the 10-UE instance; ibm_fez for seeds 6 and 7; ibm_fez for seed 1
-until its ibm_kingston copy completes), and Section VI-E quotes the ranges of that pairing.
+same processor (ibm_kingston for seeds 1, 2, 3, 5 and the 10-UE instance; ibm_fez for seeds 6 and 7), and Section VI-E
+quotes the ranges of that pairing: P(optimal | feasible) 0.03 to 0.33 against uniform 0.06 to 0.25 (ratio 0.52 to
+2.04), approximation ratio within +0.07 of uniform, W-state feasible fraction 34 to 74% on the ibm_kingston rows.

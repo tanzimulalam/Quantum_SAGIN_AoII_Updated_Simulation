@@ -1,6 +1,6 @@
 \begin{table}[!t]
 \centering
-\caption{Device Sampling Results on IBM Heron Processors (greedy start: \texttt{ibm\_kingston}, seeds 6 and 7 on \texttt{ibm\_fez}; $W$-state start on the same processor, except U6 s1 (\texttt{ibm\_fez}); U: number of UEs, s: seed, d: domain; uniform baseline per run)}
+\caption{Device Sampling Results on IBM Heron Processors (greedy start: \texttt{ibm\_kingston}, seeds 6 and 7 on \texttt{ibm\_fez}; $W$-state start on the same processor; U: number of UEs, s: seed, d: domain; uniform baseline per run)}
 \label{tab:hardware}
 \scriptsize
 \setlength{\tabcolsep}{2.5pt}
@@ -10,8 +10,8 @@
 \textbf{Instance} & \textbf{Qubits} & \multicolumn{2}{c|}{\textbf{2q gates}} & \textbf{Spread} & \multicolumn{2}{c|}{\textbf{Feasible shots}} & \multicolumn{2}{c|}{$P(\text{opt.}\mid\text{feas.})$} & \multicolumn{2}{c|}{\textbf{Uniform} $P(\text{opt.})$} \\
  & & greedy & $W$ & & greedy & $W$ & greedy & $W$ & greedy & $W$ \\
 \hline
-U6 s1 d0 & 18 & 139 & 179 & 43\% & 63\% & 40\% & 0.95 & 0.16 & 0.125 & 0.125 \\
-U6 s1 d1 & 20 & 301 & 314 & 307\% & 43\% & 16\% & 0.93 & 0.17 & 0.125 & 0.125 \\
+U6 s1 d0 & 18 & 139 & 179 & 43\% & 63\% & 62\% & 0.95 & 0.17 & 0.125 & 0.125 \\
+U6 s1 d1 & 20 & 301 & 314 & 307\% & 43\% & 36\% & 0.93 & 0.15 & 0.125 & 0.125 \\
 U6 s2 d0 & 18 & 139 & 179 & 35\% & 61\% & 62\% & 0.95 & 0.09 & 0.031 & 0.125 \\
 U6 s2 d1 & 12 & 58 & 78 & 0\% & 74\% & 74\% & 0.94 & 0.12 & 0.016 & 0.125 \\
 U6 s3 d0 & 24 & 305 & 333 & 115\% & 35\% & 34\% & 0.91 & 0.03 & 0.062 & 0.062 \\
