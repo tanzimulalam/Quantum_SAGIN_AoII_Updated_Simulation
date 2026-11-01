@@ -245,7 +245,7 @@ cannot be simulated, so their angles are transferred from the largest simulated 
 Thirteen device domains on six 6-UE instances and one 10-UE instance, 29 s of QPU time over eight jobs. In every
 domain the best feasible device sample equals the noiseless optimum (for the 38-qubit domain, the greedy assignment,
 which the exact ILP confirms as optimal), and every decoded network schedule attains the exact ILP optimum. The
-feasible-shot fraction is the honest measure of device noise: 60 to 86% at 8 to 18 qubits and up to 139 two-qubit
+feasible-shot fraction is the honest measure of device noise: 59 to 86% at 8 to 18 qubits and up to 142 two-qubit
 gates, 35 to 43% at 20 to 24 qubits and about 300 gates, and 2.6% (107 of 4096 shots) at 38 qubits and 606 gates. The
 noise-model predictions bracket the device values at 18 to 20 qubits (FakeTorino 52 and 33%, FakeFez 70 and 48%,
 device 63 and 43%). At the 38-qubit scale the device still contains the optimum in 4096 shots, but a few hundred more
@@ -504,8 +504,8 @@ device result is retention of the warm start under noise, not a search. W-state 
 
 Same domains, angles optimized from the W state on the simulator, 4096 shots, no error suppression. Feasible-shot
 fraction 16 to 66% on the 6-UE domains (the W-state preparation ladder deepens the circuits) and 1.4% at 38 qubits.
-P(optimal | feasible shot) 0.04 to 0.33 against the uniform baseline 0.016 to 0.25 (ratio to uniform 0.5 to 2.1 across
-the twelve 6-UE domains); mean approximation ratio of feasible shots within +0.00 to +0.04 of the uniform value;
+P(optimal | feasible shot) 0.04 to 0.33 against the uniform baseline of the same run, 0.06 to 0.25 (each run re-solves the scenario weights, and on the two seed-2 domains the W run's optimal set differs from the greedy run's: uniform 0.125 against 0.031 and 0.016; the device table lists the baseline per run; ratio to uniform 0.53 to 2.04 across
+the twelve 6-UE domains); mean approximation ratio of feasible shots within +0.00 to +0.05 of the uniform value;
 P(optimal shot) 0.006 to 0.22. At 38 qubits no feasible shot was optimal (uniform 0.006). Every decoded network
 schedule still attained the ILP optimum (the 38-qubit run's best domain sample was suboptimal for the domain but
 tied at the network worst case). Conclusion written into Section VI-E: at depth 1 on hardware the W-state sampler is a
