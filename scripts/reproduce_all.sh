@@ -66,4 +66,6 @@ echo "## 10. Figures and tables"
 "$PY" scripts/make_figures.py --prefix sweeps_compact --fig-prefix compact
 "$PY" scripts/make_figures.py --prefix sweeps_tle_ntn --fig-prefix tle_ntn
 "$PY" scripts/make_figures.py --prefix sweeps_tle_ntn_noack --fig-prefix tle_ntn_noack
+"$PY" scripts/make_paper_figures.py      # Figs. 2 to 6 at their printed size, grayscale
+"$PY" scripts/draw_system_model.py       # Fig. 1 from its TikZ source
 echo "done"

@@ -35,6 +35,7 @@ Results and figures of the current run are summarised in `RESULTS.md`.
 | `sentinel/sample_stats.py` | Enumerates a domain's one-hot assignments (exact optimum, uniform-feasible baseline, energy spread) and scores measured shots: P(optimal shot), P(optimal given feasible), approximation ratio |
 | `scripts/reanalyze_device_runs.sh`, `scripts/device_batch_wstate.sh` | Per-shot statistics for every saved device run (`hardware_run.py --reanalyze`), and the W-state (no warm start) device batch |
 | `tests/diag_certificate_tightness.py` | Per-epoch certified vs realized AoII for robust SENTINEL under TLE + NTN: tightness ratio, violation rate and sizes |
+| `scripts/make_paper_figures.py` | Draws Figs. 2 to 6 of the manuscript at the size the paper includes them (column width, Times, grayscale with hatching) into paper/figures/ |
 | `scripts/draw_system_model.py` | Compiles the TikZ source of Fig. 1 (paper/figures/system_model.tex, black and white, Font Awesome icons) into figures/system_model.pdf |
 | `scripts/qaoa_depth_shots_study.py` | Depth / shots / initial-state study of the XY-QAOA on hardware-sized domains (P of sampling the optimal set vs uniform) |
 | `sentinel/tle_geometry.py` | SGP4 propagation of the Starlink TLE snapshot in `data/`; persistent serving slots with natural handovers |
